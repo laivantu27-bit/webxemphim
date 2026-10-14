@@ -1,0 +1,248 @@
+.container {
+    padding: 8px 0;
+}
+
+.reportCard {
+    background: #1e1f24;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 14px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+
+    :global {
+        .ant-card-body {
+            padding: 24px;
+        }
+    }
+}
+
+.headerBar {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 24px;
+
+    .title {
+        font-size: 20px;
+        font-weight: 700;
+        color: #fff;
+        margin: 0 0 4px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .subtitle {
+        color: #888;
+        font-size: 13px;
+        margin: 0;
+    }
+
+    .controls {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .btnPrint {
+        background: #e50914;
+        border-color: #e50914;
+        font-weight: 600;
+
+        &:hover {
+            background: #f40612 !important;
+            border-color: #f40612 !important;
+        }
+    }
+}
+
+.printHeader {
+    display: none;
+    text-align: center;
+    margin-bottom: 20px;
+
+    h2 {
+        font-size: 18px;
+        color: #111;
+        margin: 0 0 4px;
+    }
+    p {
+        margin: 2px 0;
+        font-size: 12px;
+        color: #444;
+    }
+}
+
+.kpiRow {
+    margin-bottom: 24px;
+}
+
+.kpiCard {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    transition: transform 0.2s;
+
+    &:hover {
+        transform: translateY(-2px);
+    }
+
+    .kpiIcon {
+        font-size: 32px;
+    }
+
+    .kpiBody {
+        display: flex;
+        flex-direction: column;
+
+        .kpiLabel {
+            font-size: 12.5px;
+            color: #aaa;
+            margin-bottom: 4px;
+        }
+
+        .kpiNumber {
+            font-size: 22px;
+            font-weight: 800;
+            color: #fff;
+        }
+
+        .kpiSub {
+            font-size: 11.5px;
+            color: #777;
+            margin-top: 2px;
+        }
+    }
+
+    &.totalKpi {
+        border-color: rgba(229, 9, 20, 0.4);
+        background: linear-gradient(135deg, rgba(229, 9, 20, 0.15), rgba(255, 255, 255, 0.02));
+        .kpiNumber { color: #ff4757; }
+    }
+    &.ticketKpi {
+        .kpiNumber { color: #2ed573; }
+    }
+    &.snackKpi {
+        .kpiNumber { color: #ff9f43; }
+    }
+    &.checkInKpi {
+        .kpiNumber { color: #00d2d3; }
+    }
+}
+
+.paymentSection {
+    margin-bottom: 24px;
+
+    .subTitle {
+        font-size: 14px;
+        font-weight: 700;
+        color: #ddd;
+        margin-bottom: 12px;
+    }
+
+    .payBox {
+        background: rgba(0, 0, 0, 0.25);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 10px;
+        padding: 12px 14px;
+
+        .payName {
+            font-size: 12.5px;
+            color: #aaa;
+            margin-bottom: 4px;
+        }
+
+        .payAmount {
+            font-size: 18px;
+            font-weight: 800;
+
+            &.green { color: #2ed573; }
+            &.purple { color: #a55eea; }
+            &.pink { color: #ff4757; }
+            &.blue { color: #0984e3; }
+        }
+    }
+}
+
+.tableSection {
+    .subTitle {
+        font-size: 14px;
+        font-weight: 700;
+        color: #ddd;
+        margin-bottom: 12px;
+    }
+
+    .codeText {
+        font-family: monospace;
+        font-weight: 700;
+        color: #ff9f43;
+    }
+
+    .priceHighlight {
+        font-weight: 700;
+        color: #e50914;
+    }
+
+    .customTable {
+        :global {
+            .ant-table {
+                background: transparent;
+                color: #ddd;
+            }
+            .ant-table-thead > tr > th {
+                background: rgba(255, 255, 255, 0.05);
+                color: #bbb;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            }
+            .ant-table-tbody > tr > td {
+                border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+                color: #ddd;
+            }
+            .ant-table-tbody > tr:hover > td {
+                background: rgba(255, 255, 255, 0.04) !important;
+            }
+        }
+    }
+}
+
+.signatureSection {
+    display: none;
+    margin-top: 30px;
+}
+
+/* Print CSS */
+@media print {
+    body * {
+        visibility: hidden;
+    }
+    .reportContent, .reportContent * {
+        visibility: visible;
+    }
+    .reportContent {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100% !important;
+        background: #fff !important;
+        color: #111 !important;
+        padding: 20px;
+    }
+    .printHeader {
+        display: block !important;
+    }
+    .signatureSection {
+        display: block !important;
+    }
+    .customTable {
+        :global {
+            .ant-table { color: #111 !important; }
+            .ant-table-thead > tr > th { background: #eee !important; color: #111 !important; }
+            .ant-table-tbody > tr > td { color: #111 !important; }
+        }
+    }
+}

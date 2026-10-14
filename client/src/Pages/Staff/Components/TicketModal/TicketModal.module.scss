@@ -1,0 +1,227 @@
+.modalWrapper {
+    :global {
+        .ant-modal-content {
+            padding: 0;
+            border-radius: 16px;
+            overflow: hidden;
+            background: #18191c;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+    }
+}
+
+.printContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px;
+    background: #18191c;
+}
+
+.ticketReceipt {
+    width: 100%;
+    max-width: 380px;
+    background: #fff;
+    color: #111;
+    padding: 24px 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    font-family: 'Courier New', Courier, monospace;
+    line-height: 1.4;
+
+    .header {
+        text-align: center;
+        margin-bottom: 12px;
+
+        .cinemaLogo {
+            font-size: 18px;
+            font-weight: 900;
+            color: #d63031;
+            letter-spacing: 1px;
+        }
+
+        .cinemaBranch {
+            font-size: 11px;
+            color: #555;
+            margin-top: 2px;
+        }
+
+        .ticketTitle {
+            font-size: 13px;
+            font-weight: 700;
+            margin-top: 6px;
+            text-transform: uppercase;
+        }
+    }
+
+    .dividerDots {
+        text-align: center;
+        color: #888;
+        font-size: 11px;
+        margin: 8px 0;
+        letter-spacing: 2px;
+    }
+
+    .movieSection {
+        text-align: center;
+        margin-bottom: 14px;
+
+        .movieName {
+            font-size: 17px;
+            font-weight: 800;
+            color: #111;
+            margin: 0 0 6px;
+            text-transform: uppercase;
+        }
+
+        .badgeRow {
+            display: flex;
+            justify-content: center;
+            gap: 6px;
+        }
+    }
+
+    .infoGrid {
+        margin-bottom: 12px;
+
+        .infoRow {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            padding: 3px 0;
+
+            .label {
+                color: #555;
+            }
+
+            .val {
+                font-weight: 600;
+                color: #111;
+            }
+
+            .valTime {
+                font-weight: 800;
+                font-size: 14px;
+                color: #d63031;
+            }
+
+            .valSeats {
+                font-weight: 800;
+                font-size: 15px;
+                color: #0984e3;
+            }
+
+            .valText {
+                font-weight: 600;
+            }
+        }
+    }
+
+    .servicesSection {
+        background: #f8f9fa;
+        padding: 8px 10px;
+        border-radius: 6px;
+        margin: 8px 0;
+        font-size: 12px;
+
+        .serviceTitle {
+            font-weight: 700;
+            margin-bottom: 4px;
+            color: #d35400;
+        }
+
+        .serviceRow {
+            display: flex;
+            justify-content: space-between;
+            color: #444;
+            padding: 2px 0;
+        }
+    }
+
+    .totalRow {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 15px;
+        font-weight: 800;
+        padding: 8px 0;
+        border-top: 1px dashed #bbb;
+        border-bottom: 1px dashed #bbb;
+        margin: 8px 0;
+
+        .totalAmount {
+            font-size: 18px;
+            color: #d63031;
+        }
+    }
+
+    .qrSection {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        margin-top: 14px;
+
+        .qrBox {
+            background: #fff;
+            padding: 8px;
+            border-radius: 8px;
+        }
+
+        .ticketCode {
+            font-size: 13px;
+            letter-spacing: 1px;
+            margin-top: 6px;
+            color: #222;
+        }
+
+        .ticketFooterNote {
+            font-size: 10px;
+            color: #777;
+            margin-top: 10px;
+            line-height: 1.3;
+        }
+    }
+}
+
+.actionsBar {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 20px;
+    width: 100%;
+
+    .btnPrint {
+        background: #e50914;
+        border-color: #e50914;
+        font-weight: 600;
+
+        &:hover {
+            background: #f40612 !important;
+            border-color: #f40612 !important;
+        }
+    }
+}
+
+/* Print CSS: hide all UI except ticket */
+@media print {
+    body * {
+        visibility: hidden;
+    }
+    .ticketReceipt, .ticketReceipt * {
+        visibility: visible;
+    }
+    .ticketReceipt {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 80mm !important;
+        max-width: 80mm !important;
+        margin: 0;
+        padding: 4mm;
+        box-shadow: none;
+    }
+    .actionsBar {
+        display: none !important;
+    }
+}

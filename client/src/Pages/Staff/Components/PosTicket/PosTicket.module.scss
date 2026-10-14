@@ -1,0 +1,419 @@
+.container {
+    padding: 8px 0;
+}
+
+.posCard, .checkoutCard {
+    background: #1e1f24;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 14px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+
+    :global {
+        .ant-card-body {
+            padding: 20px;
+        }
+    }
+}
+
+.filtersBar {
+    background: rgba(0, 0, 0, 0.25);
+    padding: 14px 16px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+
+    .filterLabel {
+        display: block;
+        font-size: 12.5px;
+        font-weight: 600;
+        color: #bbb;
+        margin-bottom: 6px;
+    }
+}
+
+.seatSection {
+    background: #151619;
+    border-radius: 12px;
+    padding: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+
+    .screenBar {
+        width: 70%;
+        margin: 0 auto 26px;
+        text-align: center;
+
+        .screenCurve {
+            background: linear-gradient(180deg, rgba(229, 9, 20, 0.6), transparent);
+            border-top: 3px solid #e50914;
+            color: #ddd;
+            font-size: 11px;
+            letter-spacing: 2px;
+            padding: 8px 0;
+            border-radius: 40px 40px 0 0;
+        }
+    }
+
+    .seatLoading {
+        min-height: 200px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .seatGrid {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        align-items: center;
+        overflow-x: auto;
+        padding-bottom: 10px;
+    }
+
+    .seatRow {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+
+        .rowLabel {
+            font-weight: 700;
+            color: #888;
+            width: 16px;
+            text-align: center;
+        }
+
+        .seatCells {
+            display: flex;
+            gap: 6px;
+        }
+    }
+
+    .seatBtn {
+        width: 32px;
+        height: 30px;
+        border-radius: 6px;
+        border: none;
+        font-size: 11px;
+        font-weight: 700;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.15s;
+
+        &.available {
+            background: rgba(255, 255, 255, 0.12);
+            color: #fff;
+
+            &:hover {
+                background: rgba(255, 255, 255, 0.3);
+                transform: scale(1.1);
+            }
+        }
+
+        &.selected {
+            background: #e50914;
+            color: #fff;
+            transform: scale(1.08);
+            box-shadow: 0 0 10px rgba(229, 9, 20, 0.7);
+        }
+
+        &.booked {
+            background: #444;
+            color: #777;
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        &.maintenance {
+            background: repeating-linear-gradient(
+                45deg,
+                #d35400,
+                #d35400 6px,
+                #f39c12 6px,
+                #f39c12 12px
+            );
+            color: #111;
+            cursor: not-allowed;
+            font-weight: 900;
+        }
+    }
+
+    .legendRow {
+        display: flex;
+        justify-content: center;
+        gap: 18px;
+        margin-top: 20px;
+        padding-top: 14px;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        font-size: 12px;
+        color: #aaa;
+
+        .legendItem {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+
+            .legendBox {
+                width: 16px;
+                height: 16px;
+                border-radius: 4px;
+
+                &.availBox { background: rgba(255, 255, 255, 0.15); }
+                &.selectedBox { background: #e50914; }
+                &.bookedBox { background: #444; }
+                &.maintBox {
+                    background: repeating-linear-gradient(
+                        45deg,
+                        #d35400,
+                        #d35400 4px,
+                        #f39c12 4px,
+                        #f39c12 8px
+                    );
+                }
+            }
+        }
+    }
+}
+
+.servicesSection {
+    margin-top: 20px;
+
+    .sectionTitle {
+        font-size: 14px;
+        font-weight: 700;
+        color: #ff9f43;
+        margin-bottom: 12px;
+    }
+
+    .servicesGrid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 10px;
+    }
+
+    .serviceCard {
+        background: rgba(0, 0, 0, 0.25);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 8px;
+        padding: 10px 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+
+        .svcInfo {
+            .svcName {
+                font-size: 13px;
+                font-weight: 600;
+                color: #eee;
+            }
+            .svcPrice {
+                font-size: 12px;
+                color: #ff9f43;
+                font-weight: 700;
+                margin-top: 2px;
+            }
+        }
+
+        .svcQtyControl {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+
+            button {
+                width: 26px;
+                height: 26px;
+                border-radius: 50%;
+                border: none;
+                background: rgba(255, 255, 255, 0.15);
+                color: #fff;
+                font-weight: 700;
+                cursor: pointer;
+                transition: background 0.2s;
+
+                &:hover:not(:disabled) {
+                    background: #e50914;
+                }
+                &:disabled {
+                    opacity: 0.3;
+                    cursor: not-allowed;
+                }
+            }
+
+            .qtyNumber {
+                font-size: 14px;
+                font-weight: 700;
+                min-width: 14px;
+                text-align: center;
+                color: #fff;
+            }
+        }
+    }
+}
+
+/* Checkout Panel */
+.checkoutTitle {
+    font-size: 16px;
+    font-weight: 700;
+    color: #fff;
+    margin: 0;
+}
+
+.orderMovieSummary {
+    margin-top: 10px;
+
+    .omTitle {
+        font-size: 16px;
+        font-weight: 700;
+        color: #e50914;
+        margin: 0 0 4px;
+    }
+
+    .omMeta {
+        font-size: 12.5px;
+        color: #aaa;
+    }
+}
+
+.lineItem {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    padding: 4px 0;
+
+    .lineLabel {
+        color: #888;
+    }
+    .lineSeats {
+        font-weight: 700;
+        color: #2ed573;
+        font-size: 14px;
+    }
+    .lineValue {
+        font-weight: 600;
+        color: #eee;
+    }
+}
+
+.snackSummaryList {
+    background: rgba(0, 0, 0, 0.2);
+    padding: 8px 10px;
+    border-radius: 6px;
+    margin: 8px 0;
+
+    .snackSubheader {
+        font-size: 11.5px;
+        font-weight: 700;
+        color: #ff9f43;
+        margin-bottom: 4px;
+    }
+
+    .snackSubitem {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+        color: #bbb;
+        padding: 2px 0;
+    }
+}
+
+.totalRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+
+    .totalLabel {
+        font-size: 14px;
+        font-weight: 700;
+        color: #ddd;
+    }
+
+    .totalAmount {
+        font-size: 20px;
+        font-weight: 900;
+        color: #e50914;
+    }
+}
+
+.customerForm {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 14px;
+
+    .formGroup {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+
+        label {
+            font-size: 12px;
+            color: #aaa;
+            font-weight: 600;
+        }
+    }
+
+    .paymentRadioGroup {
+        width: 100%;
+        display: flex;
+
+        :global {
+            .ant-radio-button-wrapper {
+                flex: 1;
+                text-align: center;
+                background: rgba(255, 255, 255, 0.05);
+                border-color: rgba(255, 255, 255, 0.15);
+                color: #bbb;
+
+                &.ant-radio-button-wrapper-checked {
+                    background: #e50914;
+                    border-color: #e50914;
+                    color: #fff;
+                }
+            }
+        }
+    }
+
+    .cashCalc {
+        background: rgba(46, 213, 115, 0.1);
+        border: 1px solid rgba(46, 213, 115, 0.3);
+        padding: 10px 12px;
+        border-radius: 8px;
+        margin-top: 4px;
+
+        .calcRow {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            color: #ddd;
+            margin-bottom: 6px;
+
+            &:last-child {
+                margin-bottom: 0;
+            }
+
+            .changeAmount {
+                color: #2ed573;
+                font-size: 16px;
+                font-weight: 800;
+            }
+        }
+    }
+}
+
+.btnCheckout {
+    height: 50px;
+    font-size: 15px;
+    font-weight: 700;
+    border-radius: 10px;
+    background: #e50914;
+    border-color: #e50914;
+    margin-top: 18px;
+
+    &:hover:not(:disabled) {
+        background: #f40612 !important;
+        border-color: #f40612 !important;
+        box-shadow: 0 4px 16px rgba(229, 9, 20, 0.5);
+    }
+}

@@ -1,0 +1,117 @@
+.wrapper {
+    padding: 24px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+
+    h2 {
+        margin: 0;
+        color: #1f1f1f;
+        font-size: 24px;
+    }
+}
+
+.room-table {
+    :global {
+        .ant-table-thead > tr > th {
+            background: #fafafa;
+        }
+    }
+}
+
+.form-actions {
+    margin-top: 24px;
+    text-align: right;
+}
+
+.seat-preview {
+    margin-top: 16px;
+    padding: 16px;
+    background: #1a1a2e;
+    border-radius: 12px;
+    text-align: center;
+
+    .screen {
+        width: 70%;
+        height: 6px;
+        background: linear-gradient(90deg, transparent, #00d4ff, transparent);
+        margin: 0 auto 8px;
+        border-radius: 50%;
+    }
+
+    .screen-label {
+        color: #aaa;
+        font-size: 12px;
+        margin-bottom: 16px;
+        letter-spacing: 2px;
+    }
+
+    .seat-grid {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .seat-row {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+
+        .row-label {
+            width: 20px;
+            color: #888;
+            font-size: 11px;
+            font-weight: bold;
+            text-align: center;
+        }
+    }
+
+    .seat {
+        width: 22px;
+        height: 22px;
+        background: #2d6a4f;
+        border-radius: 4px 4px 6px 6px;
+        border: 1px solid #40916c;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 7px;
+        color: #ccc;
+        cursor: default;
+        transition: all 0.2s;
+
+        &:hover {
+            background: #40916c;
+            transform: scale(1.15);
+        }
+    }
+
+    .total-info {
+        margin-top: 12px;
+        color: #00d4ff;
+        font-size: 13px;
+        font-weight: 500;
+    }
+}
+
+.status-active {
+    color: #52c41a;
+    font-weight: 500;
+}
+
+.status-inactive {
+    color: #ff4d4f;
+    font-weight: 500;
+}
+
+.capacity-tag {
+    font-weight: 500;
+}

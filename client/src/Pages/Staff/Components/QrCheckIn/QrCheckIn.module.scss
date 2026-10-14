@@ -1,0 +1,342 @@
+.container {
+    padding: 8px 0;
+}
+
+.cardHeader {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.searchCard, .ticketCard {
+    background: #1e1f24;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 14px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+
+    :global {
+        .ant-card-head {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            color: #fff;
+        }
+        .ant-card-body {
+            padding: 20px;
+        }
+    }
+}
+
+.scannerToggleSection {
+    margin-bottom: 16px;
+
+    .btnScanner {
+        height: 48px;
+        font-weight: 600;
+        font-size: 15px;
+        border-radius: 10px;
+    }
+}
+
+.scannerWrapper {
+    background: #111;
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+
+    .qrReaderBox {
+        width: 100%;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    .scannerTip {
+        text-align: center;
+        color: #ff9f43;
+        font-size: 13px;
+        margin: 10px 0 0;
+    }
+}
+
+.inputGroup {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+
+    .searchIcon {
+        color: #888;
+    }
+
+    .btnSearch {
+        background: #e50914;
+        border-color: #e50914;
+        font-weight: 600;
+        padding: 0 24px;
+        border-radius: 8px;
+
+        &:hover {
+            background: #f40612 !important;
+            border-color: #f40612 !important;
+        }
+    }
+}
+
+.recentSection {
+    margin-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    padding-top: 14px;
+
+    .recentTitle {
+        font-size: 13px;
+        color: #aaa;
+        margin: 0 0 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .recentList {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        max-height: 240px;
+        overflow-y: auto;
+    }
+
+    .recentItem {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: rgba(255, 255, 255, 0.04);
+        padding: 8px 12px;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+
+        .recentMain {
+            display: flex;
+            flex-direction: column;
+
+            .recentMovie {
+                font-weight: 600;
+                color: #fff;
+                font-size: 13px;
+            }
+
+            .recentSeats {
+                font-size: 12px;
+                color: #0984e3;
+            }
+        }
+
+        .recentMeta {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: #888;
+        }
+    }
+}
+
+.loadingBox, .emptyBox {
+    min-height: 380px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: #888;
+
+    .emptyIcon {
+        font-size: 48px;
+        margin-bottom: 12px;
+    }
+
+    h3 {
+        color: #ddd;
+        margin: 0 0 8px;
+    }
+
+    p {
+        max-width: 360px;
+        font-size: 13px;
+        line-height: 1.5;
+    }
+}
+
+.ticketContent {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.alertBanner {
+    border-radius: 10px;
+    font-weight: 500;
+}
+
+.ticketInfoCard {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 18px;
+}
+
+.movieRow {
+    display: flex;
+    gap: 18px;
+    margin-bottom: 16px;
+
+    .moviePoster {
+        width: 110px;
+        height: 155px;
+        border-radius: 8px;
+        object-fit: cover;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    }
+
+    .movieDetails {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+
+        .movieTitle {
+            margin: 0 0 6px;
+            color: #fff;
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .tagRow {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+
+        .showtimeBox {
+            background: rgba(0, 0, 0, 0.25);
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: 13.5px;
+            color: #ccc;
+
+            .timeHighlight {
+                color: #ff4757;
+                font-size: 15px;
+            }
+
+            .seatsLine {
+                margin-top: 6px;
+            }
+
+            .seatsBadge {
+                color: #2ed573;
+                font-weight: 800;
+                font-size: 16px;
+            }
+        }
+    }
+}
+
+.detailsGrid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 12px 14px;
+    border-radius: 8px;
+
+    .detailItem {
+        display: flex;
+        flex-direction: column;
+
+        .dtLabel {
+            font-size: 11.5px;
+            color: #888;
+            margin-bottom: 2px;
+        }
+
+        .dtVal {
+            font-size: 13.5px;
+            font-weight: 600;
+            color: #eee;
+        }
+
+        .dtPrice {
+            font-size: 16px;
+            font-weight: 800;
+            color: #e50914;
+        }
+    }
+}
+
+.snacksBox {
+    margin-top: 14px;
+    padding: 10px 12px;
+    background: rgba(255, 159, 67, 0.1);
+    border: 1px solid rgba(255, 159, 67, 0.3);
+    border-radius: 8px;
+
+    .snackTitle {
+        font-size: 12.5px;
+        font-weight: 700;
+        color: #ff9f43;
+        margin-bottom: 6px;
+    }
+
+    .snackItems {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+
+        .snackBadge {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+        }
+    }
+}
+
+.actionsFooter {
+    display: flex;
+    gap: 12px;
+    margin-top: 10px;
+
+    .btnCheckIn {
+        flex: 1;
+        height: 48px;
+        font-size: 15px;
+        font-weight: 700;
+        border-radius: 10px;
+        background: #2ed573;
+        border-color: #2ed573;
+
+        &:hover {
+            background: #26af5f !important;
+            border-color: #26af5f !important;
+        }
+
+        &:disabled {
+            background: #444 !important;
+            border-color: #444 !important;
+            color: #888 !important;
+        }
+    }
+
+    .btnPrint {
+        height: 48px;
+        font-size: 15px;
+        font-weight: 600;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.08);
+        color: #fff;
+        border-color: rgba(255, 255, 255, 0.2);
+
+        &:hover {
+            background: rgba(255, 255, 255, 0.18) !important;
+            color: #fff !important;
+        }
+    }
+}

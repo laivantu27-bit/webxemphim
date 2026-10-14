@@ -39,3 +39,7 @@ Thumbs.db
 cloudflared.exe
 cloudflared
 
+# .env files
+.env
+.env.*
+!.env.example

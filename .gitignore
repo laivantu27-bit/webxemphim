@@ -9,10 +9,11 @@ dist-ssr
 build
 
 # Environment files
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env
+.env.*
+*.env
+server/.env
+client/.env.local
 
 # Logs
 logs

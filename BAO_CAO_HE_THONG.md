@@ -137,18 +137,25 @@ mindmap
 * **Dịch vụ Bắp & Nước đi kèm:** Khách hàng có thể chọn thêm combo bắp phô mai, caramel, nước ngọt Coca, Sprite với số lượng tùy ý.
 * **Mã giảm giá (Voucher):** Ô nhập mã khuyến mãi, hệ thống tự động kiểm tra điều kiện áp dụng, giảm trừ trực tiếp vào hóa đơn.
 
-#### 1.5. Hệ Thống Thanh Toán Thật VietQR (Vietcombank)
-* **Chuyển đổi hoàn toàn từ thanh toán ảo sang thanh toán thật:**
-  * **Ngân hàng:** **Vietcombank (Ngân hàng TMCP Ngoại Thương Việt Nam)**
-  * **Số tài khoản (STK):** `1336991507`
-  * **Chủ tài khoản:** **LẠI VĂN TÚ**
-  * **Chuẩn chuyển tiền:** **VietQR NAPAS 247**.
+#### 1.5. Hệ Thống Thanh Toán Thật 100% (VietQR Vietcombank & Ví MoMo)
+* **Chuyển đổi hoàn toàn từ thanh toán ảo sang thanh toán thật 100%:**
+  * **Kênh 1: Ngân Hàng Vietcombank (Chuẩn VietQR NAPAS 247)**
+    * Ngân hàng: **Vietcombank (Ngân hàng TMCP Ngoại Thương Việt Nam)**
+    * Số tài khoản (STK): `1336991507`
+    * Chủ tài khoản: **LẠI VĂN TÚ**
+    * Cơ chế: Tự động tạo mã QR chuẩn VietQR động với số tiền và nội dung chuyển khoản tự điền.
+  * **Kênh 2: Ví Điện Tử MoMo Thật**
+    * Đơn vị thụ hưởng: **Ví Điện Tử MoMo (CTCP Dịch Vụ Di Động Trực Tuyến)**
+    * Mã định danh tài khoản MoMo: `PSP2626913300000151`
+    * Mã BIN ngân hàng liên kết: `971025` (MoMo)
+    * Chủ tài khoản: **LẠI VĂN TÚ**
+    * Cơ chế: Tự động tạo mã QR MoMo đa năng kết nối NAPAS 247, tương thích tuyệt đối khi quét bằng ứng dụng MoMo lẫn mọi App ngân hàng di động.
 * **Trải nghiệm thanh toán ưu việt:**
-  * Tự động sinh mã **VietQR Vietcombank thật**, mã hóa chính xác số tiền vé và mã đơn riêng biệt (`VEPHIM SPxxxxxx`).
-  * Khách chỉ cần mở **bất kỳ App Ngân hàng** (VCB Digibank, MB, Techcombank, BIDV, VPBank, Agribank...) hoặc ví **MoMo, ZaloPay** ➔ chọn Quét QR ➔ Số tiền, người nhận và nội dung tự động điền đầy đủ.
+  * Tự động sinh mã **QR Vietcombank hoặc MoMo thật**, mã hóa chính xác số tiền vé và mã đơn riêng biệt (`VEPHIM SPxxxxxx`).
+  * Khách chỉ cần mở **bất kỳ App Ngân hàng** (VCB Digibank, MB, Techcombank, BIDV, VPBank, Agribank...) hoặc ví **MoMo** ➔ chọn Quét QR ➔ Số tiền, người nhận và nội dung tự động điền đầy đủ.
   * Cung cấp các nút **Sao chép (Copy) 1-chạm** cho STK, Tên chủ TK, Số tiền, Nội dung chuyển khoản.
   * Đồng hồ đếm ngược giao dịch an toàn 15:00 phút.
-  * Nút **`✅ TÔI ĐÃ CHUYỂN TIỀN THÀNH CÔNG`**: Sau khi chuyển tiền, khách bấm xác nhận ➔ Hệ thống ghi nhận vé thành công, lưu vào cơ sở dữ liệu, cộng điểm thưởng XP và chuyển ngay đến trang nhận vé.
+  * Nút **`✅ TÔI ĐÃ CHUYỂN TIỀN THÀNH CÔNG`**: Sau khi chuyển tiền, khách bấm xác nhận ➔ Hệ thống ghi nhận vé thành công với khóa chống trùng ghế (Row-level lock), lưu vào cơ sở dữ liệu, cộng điểm thưởng XP (+100 XP/vé) và chuyển ngay đến trang nhận vé.
   * Hỗ trợ nút **`Mở ảnh QR gốc`** để lưu ảnh mã QR vào album điện thoại.
 
 #### 1.6. Vé Điện Tử & Mã QR Check-in (`/payment-success/:id`)
@@ -215,7 +222,7 @@ graph LR
 * **Thanh toán tại quầy đa dạng:**
   * *Tiền mặt:* Ô nhập tiền khách đưa, tự động tính tiền thừa cần trả khách.
   * *Chuyển khoản VietQR thật:* Hiển thị ngay mã VietQR Vietcombank STK `1336991507` và số tiền vé trên màn hình POS để khách quét chuyển tiền thật.
-  * *Ví MoMo.*
+  * *Thanh toán Ví MoMo thật:* Hiển thị trực tiếp mã MoMo QR thật STK `PSP2626913300000151` (Chủ TK: LẠI VĂN TÚ) để khách quét thanh toán ngay tại quầy.
 * **In vé & Xuất biên lai nhiệt:** Mẫu vé in chuẩn rạp chiếu phim với đầy đủ thông tin xuất chiếu.
 
 #### 2.3. Quản Lý Phòng Chiếu & Sửa Chi Nhánh Rạp (SeatMaintenance)
@@ -305,8 +312,9 @@ graph LR
 * `POST /api/staff/room-branch`: Cập nhật chi nhánh rạp cho phòng chiếu từ phía nhân viên.
 
 ### 3. Phân hệ Đặt Vé & Thanh Toán
-* `POST /api/payments/create`: Tạo đơn đặt vé, khóa ghế chống trùng, hỗ trợ phương thức `vietqr` và cộng điểm XP.
+* `POST /api/payments/create`: Tạo đơn đặt vé, khóa ghế chống trùng, hỗ trợ phương thức `vietqr`, `momo` và cộng điểm XP.
 * `GET /api/payments/bank-config`: Lấy thông tin tài khoản ngân hàng thụ hưởng (Vietcombank - `1336991507`).
+* `GET /api/payments/momo-config`: Lấy thông tin tài khoản Ví MoMo thụ hưởng (`PSP2626913300000151` - `LẠI VĂN TÚ`).
 * `GET /api/payments/detail?id=...`: Lấy thông tin hóa đơn và vé điện tử.
 * `GET /api/payments/user`: Lấy lịch sử mua vé của người dùng đang đăng nhập.
 
@@ -336,3 +344,4 @@ Hệ thống **StreamPhim** hiện tại là một giải pháp hoàn chỉnh, c
 1. **Trải nghiệm người dùng:** Giao diện sắc nét chuẩn rạp phim quốc tế, mượt mà trên cả máy tính lẫn điện thoại di động.
 2. **Tính thực tiễn:** Thanh toán trực tiếp vào tài khoản ngân hàng thật qua mã VietQR, định vị GPS tìm rạp gần nhất, chatbot hỗ trợ giọng nói cho người cao tuổi.
 3. **Độ ổn định & Tin cậy:** Kiểm soát xung đột chỗ ngồi theo thời gian thực (Concurrency Safe), phân quyền 3 lớp chặt chẽ (User - Staff - Admin), mã nguồn đã được đóng gói và đồng bộ lên GitHub an toàn.
+

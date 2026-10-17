@@ -36,11 +36,31 @@ const BANK_CONFIG = {
     template: 'compact2',
 };
 
+const MOMO_CONFIG = {
+    bankId: 'momo',
+    bin: '971025',
+    walletName: 'Ví Điện Tử MoMo (CTCP Dịch Vụ Di Động Trực Tuyến)',
+    accountNumber: 'PSP2626913300000151',
+    accountName: 'LAI VAN TU',
+    template: 'compact2',
+};
+
 class PaymentsController {
     async getBankConfig(req, res) {
         new OK({
             message: 'Lấy thông tin tài khoản ngân hàng thành công',
-            metadata: BANK_CONFIG,
+            metadata: {
+                ...BANK_CONFIG,
+                bank: BANK_CONFIG,
+                momo: MOMO_CONFIG,
+            },
+        }).send(res);
+    }
+
+    async getMomoConfig(req, res) {
+        new OK({
+            message: 'Lấy thông tin tài khoản Ví MoMo thành công',
+            metadata: MOMO_CONFIG,
         }).send(res);
     }
 
@@ -114,7 +134,7 @@ class PaymentsController {
             );
         }
 
-        // 1. Direct / Cash / Test / VietQR / Banking payment method với Transaction & Row-level lock
+        // 1. Direct / Cash / Test / VietQR / Banking / MoMo payment method với Transaction & Row-level lock
         if (
             typePayment === 'direct' ||
             typePayment === 'cash' ||
@@ -122,7 +142,8 @@ class PaymentsController {
             typePayment === 'vietqr' ||
             typePayment === 'banking' ||
             typePayment === 'vietcombank' ||
-            typePayment === 'vnpay'
+            typePayment === 'vnpay' ||
+            typePayment === 'momo'
         ) {
             const t = await connect.transaction();
             try {

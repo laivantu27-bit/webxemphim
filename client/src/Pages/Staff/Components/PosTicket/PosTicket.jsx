@@ -576,6 +576,27 @@ const PosTicket = () => {
                                     </div>
                                 </div>
                             )}
+
+                            {/* MoMo QR Display if MoMo selected */}
+                            {paymentMethod === 'momo' && (
+                                <div style={{ background: 'rgba(216, 45, 139, 0.12)', border: '1px solid #d82d8b', borderRadius: 10, padding: 12, marginTop: 12, textAlign: 'center' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 8 }}>
+                                        <span style={{ background: '#d82d8b', color: '#fff', padding: '2px 8px', borderRadius: 4, fontWeight: 'bold', fontSize: 11 }}>MoMo</span>
+                                        <span style={{ fontWeight: 'bold', color: '#fff', fontSize: 13 }}>Mã MoMo QR Thanh Toán Thật</span>
+                                    </div>
+                                    <img
+                                        src={`https://img.vietqr.io/image/971025-PSP2626913300000151-compact2.png?amount=${totalAmount}&addInfo=POS%20MOMO%20CGV&accountName=LAI%20VAN%20TU`}
+                                        alt="MoMo QR POS"
+                                        style={{ width: 180, height: 'auto', margin: '0 auto', borderRadius: 8, border: '2px solid #d82d8b', background: '#fff', display: 'block' }}
+                                    />
+                                    <div style={{ marginTop: 8, fontSize: 12, color: '#ccc' }}>
+                                        <div>Ví: <strong>Ví Điện Tử MoMo</strong></div>
+                                        <div>STK MoMo: <strong style={{ color: '#ff76ac', fontSize: 14 }}>PSP2626913300000151</strong></div>
+                                        <div>Chủ TK: <strong>LẠI VĂN TÚ</strong></div>
+                                        <div>Số tiền: <strong style={{ color: '#ff4d4f', fontSize: 14 }}>{totalAmount.toLocaleString()}đ</strong></div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         {/* Submit Button */}

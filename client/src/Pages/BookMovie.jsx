@@ -49,6 +49,7 @@ function BookMovie() {
     const [paymentMethod, setPaymentMethod] = useState('vietqr');
     const [isModalVisible, setIsModalVisible] = useState(false);
     const [isVietQrModalVisible, setIsVietQrModalVisible] = useState(false);
+    const [isMomoModalVisible, setIsMomoModalVisible] = useState(false);
     const [vietQrCode, setVietQrCode] = useState('');
     const [qrCountdown, setQrCountdown] = useState(900);
     const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
@@ -127,16 +128,16 @@ function BookMovie() {
         return () => clearInterval(timer);
     }, []);
 
-    // Countdown timer for VietQR payment modal
+    // Countdown timer for VietQR / MoMo payment modal
     useEffect(() => {
         let timer = null;
-        if (isVietQrModalVisible && qrCountdown > 0) {
+        if ((isVietQrModalVisible || isMomoModalVisible) && qrCountdown > 0) {
             timer = setInterval(() => {
                 setQrCountdown((prev) => (prev > 0 ? prev - 1 : 0));
             }, 1000);
         }
         return () => clearInterval(timer);
-    }, [isVietQrModalVisible, qrCountdown]);
+    }, [isVietQrModalVisible, isMomoModalVisible, qrCountdown]);
 
     const formatCountdown = (seconds) => {
         const mins = Math.floor(seconds / 60);
@@ -398,6 +399,11 @@ function BookMovie() {
             setVietQrCode(randomCode);
             setQrCountdown(900); // 15 phút
             setIsVietQrModalVisible(true);
+        } else if (paymentMethod === 'momo') {
+            const randomCode = 'SP' + Math.floor(100000 + Math.random() * 900000);
+            setVietQrCode(randomCode);
+            setQrCountdown(900); // 15 phút
+            setIsMomoModalVisible(true);
         } else {
             setIsModalVisible(true);
         }
@@ -514,20 +520,11 @@ function BookMovie() {
 
         try {
             const res = await requestCreatePayment(data);
-            if (paymentMethod === 'momo') {
-                if (res.metadata?.payUrl) {
-                    window.open(res.metadata.payUrl);
-                } else {
-                    message.success('Đã tạo liên kết thanh toán MoMo');
-                    window.location.href = `/payment-success/${res.metadata.id}`;
-                }
-            } else {
-                // VietQR / Direct / Cash / Bank Transfer
-                message.success('Thanh toán thành công! Vé của bạn đã được xuất.');
-                setIsVietQrModalVisible(false);
-                setIsModalVisible(false);
-                window.location.href = `/payment-success/${res.metadata.id}`;
-            }
+            message.success('Thanh toán thành công! Vé của bạn đã được xuất.');
+            setIsVietQrModalVisible(false);
+            setIsMomoModalVisible(false);
+            setIsModalVisible(false);
+            window.location.href = `/payment-success/${res.metadata.id}`;
         } catch (error) {
             console.error(error);
             message.error(error.response?.data?.message || 'Có lỗi xảy ra khi tạo thanh toán');
@@ -1268,22 +1265,31 @@ function BookMovie() {
                                                 </div>
                                             </div>
 
-                                            {/* 2. MoMo */}
+                                            {/* 2. MoMo Real Payment */}
                                             <div
                                                 className={`
-                                                    flex items-center p-3 rounded-xl cursor-pointer border transition
-                                                    ${paymentMethod === 'momo' ? 'border-red-500 bg-[#291e23]' : 'border-gray-700 bg-[#262626] hover:border-gray-600'}
+                                                    flex items-center p-3.5 rounded-xl cursor-pointer border-2 transition
+                                                    ${paymentMethod === 'momo' ? 'border-[#d82d8b] bg-[#d82d8b]/15 shadow-md' : 'border-gray-700 bg-[#262626] hover:border-gray-600'}
                                                 `}
                                                 onClick={() => setPaymentMethod('momo')}
                                             >
                                                 <Radio value="momo" className="radio-primary" />
-                                                <div className="ml-4 flex items-center">
-                                                    <div className="h-10 w-10 flex items-center justify-center mr-3 rounded-lg bg-[#d82d8b]">
-                                                        <img src={momoLogo} alt="MoMo" className="h-7 w-7 object-contain" />
-                                                    </div>
-                                                    <div>
-                                                        <p className="font-medium text-white">Ví MoMo</p>
-                                                        <p className="text-sm text-gray-400">Thanh toán tiện lợi qua ứng dụng MoMo</p>
+                                                <div className="ml-3 flex items-center justify-between flex-grow">
+                                                    <div className="flex items-center">
+                                                        <div className="h-11 w-11 flex items-center justify-center mr-3 rounded-lg bg-[#d82d8b] shadow-md p-1">
+                                                            <img src={momoLogo} alt="MoMo" className="h-8 w-8 object-contain" />
+                                                        </div>
+                                                        <div>
+                                                            <div className="flex items-center gap-2">
+                                                                <p className="font-bold text-white text-base">Ví Điện Tử MoMo</p>
+                                                                <Tag color="magenta" className="font-semibold text-[11px] m-0 border-0 bg-[#d82d8b] text-white">
+                                                                    Thanh toán thật 100%
+                                                                </Tag>
+                                                            </div>
+                                                            <p className="text-xs text-pink-300 font-medium">
+                                                                Tài khoản: <strong className="font-mono text-white">PSP2626913300000151</strong> • Quét bằng App MoMo hoặc bất kỳ App Ngân hàng nào
+                                                            </p>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
@@ -1554,6 +1560,169 @@ function BookMovie() {
                                 size="middle"
                                 className="flex-1"
                                 onClick={() => setIsVietQrModalVisible(false)}
+                            >
+                                Hủy / Chọn lại
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            </Modal>
+
+            {/* Modal Thanh Toán MoMo Chuyển Tiền Thật (Tài khoản: PSP2626913300000151) */}
+            <Modal
+                title={
+                    <div className="flex items-center justify-between pr-6">
+                        <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-lg bg-[#d82d8b] text-white flex items-center justify-center p-1 shadow">
+                                <img src={momoLogo} alt="MoMo" className="w-6 h-6 object-contain" />
+                            </div>
+                            <div>
+                                <h3 className="text-base font-bold text-gray-900 m-0">
+                                    Thanh Toán Qua Ví Điện Tử MoMo
+                                </h3>
+                                <p className="text-xs text-gray-500 m-0">Quét bằng App MoMo hoặc bất kỳ App Ngân hàng nào</p>
+                            </div>
+                        </div>
+                        <Tag color="magenta" className="font-semibold text-xs border-0 bg-[#d82d8b] text-white">
+                            Thanh toán thật 100%
+                        </Tag>
+                    </div>
+                }
+                open={isMomoModalVisible}
+                onCancel={() => setIsMomoModalVisible(false)}
+                footer={null}
+                width={560}
+                centered
+                destroyOnClose
+            >
+                <div className="py-2 space-y-4">
+                    {/* Countdown & Security Alert */}
+                    <div className="flex items-center justify-between p-2.5 bg-pink-50 rounded-lg border border-pink-200 text-xs">
+                        <div className="flex items-center gap-1.5 text-pink-900">
+                            <SafetyCertificateFilled className="text-[#d82d8b] text-sm" />
+                            <span>Tài khoản MoMo chính thức StreamPhim • Chuyển tiền 24/7 tức thì</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-red-600 font-semibold">
+                            <ClockCircleOutlined />
+                            <span>Thời gian còn: {formatCountdown(qrCountdown)}</span>
+                        </div>
+                    </div>
+
+                    {/* Dynamic MoMo QR Image Container */}
+                    <div className="flex flex-col items-center justify-center p-3 bg-gradient-to-b from-pink-50/50 to-gray-100 rounded-xl border border-pink-200">
+                        <div className="relative group">
+                            <img
+                                src={`https://img.vietqr.io/image/971025-PSP2626913300000151-compact2.png?amount=${totalAmount}&addInfo=VEPHIM%20${vietQrCode}&accountName=LAI%20VAN%20TU`}
+                                alt="Mã QR Ví MoMo"
+                                className="w-64 sm:w-72 h-auto rounded-xl shadow-lg border-2 border-[#d82d8b] bg-white p-1"
+                            />
+                        </div>
+                        <p className="text-xs text-gray-500 mt-2 text-center">
+                            Mở <strong>ứng dụng MoMo</strong> hoặc <strong>bất kỳ App Ngân hàng nào</strong> chọn <strong>Quét QR</strong> để chuyển tiền
+                        </p>
+                    </div>
+
+                    {/* MoMo Transfer Details with 1-click Copy */}
+                    <div className="bg-gray-50 rounded-xl p-3.5 border border-gray-200 space-y-2 text-sm">
+                        <div className="flex justify-between items-center py-1 border-b border-gray-200">
+                            <span className="text-gray-500 text-xs">Ví thụ hưởng:</span>
+                            <span className="font-bold text-gray-800 text-xs sm:text-sm">Ví MoMo (CTCP Dịch Vụ Di Động Trực Tuyến)</span>
+                        </div>
+
+                        <div className="flex justify-between items-center py-1 border-b border-gray-200">
+                            <span className="text-gray-500 text-xs">Số tài khoản MoMo:</span>
+                            <div className="flex items-center gap-2">
+                                <span className="font-mono font-bold text-[#d82d8b] text-base">PSP2626913300000151</span>
+                                <Button
+                                    size="small"
+                                    icon={<CopyOutlined />}
+                                    onClick={() => handleCopy('PSP2626913300000151', 'Số tài khoản MoMo')}
+                                    className="text-xs h-6 px-2"
+                                >
+                                    Sao chép
+                                </Button>
+                            </div>
+                        </div>
+
+                        <div className="flex justify-between items-center py-1 border-b border-gray-200">
+                            <span className="text-gray-500 text-xs">Chủ tài khoản:</span>
+                            <div className="flex items-center gap-2">
+                                <span className="font-bold text-gray-800 text-xs sm:text-sm">LẠI VĂN TÚ</span>
+                                <Button
+                                    size="small"
+                                    icon={<CopyOutlined />}
+                                    onClick={() => handleCopy('LAI VAN TU', 'Tên chủ tài khoản')}
+                                    className="text-xs h-6 px-2"
+                                >
+                                    Sao chép
+                                </Button>
+                            </div>
+                        </div>
+
+                        <div className="flex justify-between items-center py-1 border-b border-gray-200">
+                            <span className="text-gray-500 text-xs">Số tiền thanh toán:</span>
+                            <div className="flex items-center gap-2">
+                                <span className="font-bold text-red-600 text-base">{totalAmount.toLocaleString('vi-VN')} đ</span>
+                                <Button
+                                    size="small"
+                                    icon={<CopyOutlined />}
+                                    onClick={() => handleCopy(totalAmount.toString(), 'Số tiền')}
+                                    className="text-xs h-6 px-2"
+                                >
+                                    Sao chép
+                                </Button>
+                            </div>
+                        </div>
+
+                        <div className="flex justify-between items-center py-1">
+                            <span className="text-gray-500 text-xs">Nội dung chuyển khoản:</span>
+                            <div className="flex items-center gap-2">
+                                <span className="font-mono font-bold text-blue-700 text-sm">VEPHIM {vietQrCode}</span>
+                                <Button
+                                    size="small"
+                                    icon={<CopyOutlined />}
+                                    onClick={() => handleCopy(`VEPHIM ${vietQrCode}`, 'Nội dung chuyển khoản')}
+                                    className="text-xs h-6 px-2"
+                                >
+                                    Sao chép
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="space-y-2 pt-1">
+                        <Button
+                            type="primary"
+                            size="large"
+                            block
+                            icon={<CheckCircleFilled />}
+                            loading={isSubmittingPayment}
+                            onClick={handlePaymentConfirm}
+                            style={{ backgroundColor: '#d82d8b', borderColor: '#d82d8b' }}
+                            className="h-12 hover:opacity-90 border-none font-bold text-base shadow-lg text-white"
+                        >
+                            ✅ TÔI ĐÃ CHUYỂN TIỀN THÀNH CÔNG
+                        </Button>
+
+                        <div className="flex gap-2">
+                            <Button
+                                size="middle"
+                                className="flex-1"
+                                icon={<DownloadOutlined />}
+                                onClick={() => {
+                                    window.open(
+                                        `https://img.vietqr.io/image/971025-PSP2626913300000151-compact2.png?amount=${totalAmount}&addInfo=VEPHIM%20${vietQrCode}&accountName=LAI%20VAN%20TU`,
+                                        '_blank'
+                                    );
+                                }}
+                            >
+                                Mở ảnh QR gốc
+                            </Button>
+                            <Button
+                                size="middle"
+                                className="flex-1"
+                                onClick={() => setIsMomoModalVisible(false)}
                             >
                                 Hủy / Chọn lại
                             </Button>

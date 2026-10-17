@@ -335,7 +335,7 @@ function PaymentSuccess() {
                                             ) : paymentData.paymentMethod === 'momo' ? (
                                                 <div className="flex items-center gap-2">
                                                     <img src={momoLogo} alt="MoMo" className="h-6" />
-                                                    <span className="text-white">MoMo</span>
+                                                    <span className="text-white font-medium">Ví MoMo (PSP2626913300000151 - LẠI VĂN TÚ)</span>
                                                 </div>
                                             ) : paymentData.paymentMethod === 'vnpay' ? (
                                                 <div className="flex items-center gap-2">

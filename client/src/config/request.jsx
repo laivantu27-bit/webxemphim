@@ -166,6 +166,11 @@ export const requestGetBankConfig = async () => {
     return res.data;
 };
 
+export const requestGetMomoConfig = async () => {
+    const res = await apiClient.get(`${apiPayments}/momo-config`);
+    return res.data;
+};
+
 /// category
 const apiCategory = '/api/category';
 

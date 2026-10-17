@@ -216,6 +216,7 @@ class MovieController {
             dateEnd,
             thumb_url,
             poster_url,
+            trailer_url,
             id,
         } = req.body;
 

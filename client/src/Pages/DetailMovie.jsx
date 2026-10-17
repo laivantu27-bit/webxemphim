@@ -197,16 +197,28 @@ function DetailMovie() {
                     {/* Trailer Video Section */}
                     {movie.trailer_url && (
                         <div className="mt-12">
-                            <div className="flex items-center justify-between mb-6">
-                                <h2 className="text-2xl font-bold text-red-600 border-l-4 border-red-600 pl-4">
+                            <div className="flex items-center justify-between mb-6 flex-wrap gap-2">
+                                <h2 className="text-xl sm:text-2xl font-bold text-red-600 border-l-4 border-red-600 pl-4">
                                     TRAILER / VIDEO PHIM - {movie.name}
                                 </h2>
-                                <button
-                                    onClick={() => setIsTrailerOpen(true)}
-                                    className="text-xs sm:text-sm bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white px-3 py-1.5 rounded-full border border-red-600/40 transition-all flex items-center space-x-1"
-                                >
-                                    <span>🔍 Xem toàn màn hình</span>
-                                </button>
+                                <div className="flex items-center space-x-2">
+                                    {movie.trailer_url && movie.trailer_url.startsWith('http') && (
+                                        <a
+                                            href={movie.trailer_url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-xs sm:text-sm bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white px-3 py-1.5 rounded-full border border-red-600/40 transition-all flex items-center space-x-1"
+                                        >
+                                            <span>▶ Mở trên YouTube</span>
+                                        </a>
+                                    )}
+                                    <button
+                                        onClick={() => setIsTrailerOpen(true)}
+                                        className="text-xs sm:text-sm bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-full transition-all flex items-center space-x-1 shadow-md shadow-red-600/30"
+                                    >
+                                        <span>🔍 Xem toàn màn hình</span>
+                                    </button>
+                                </div>
                             </div>
                             <div className="bg-[#212121] p-4 sm:p-6 rounded-2xl border border-white/5 shadow-2xl">
                                 <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black shadow-inner">

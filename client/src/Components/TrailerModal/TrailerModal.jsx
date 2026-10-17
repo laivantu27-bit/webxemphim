@@ -5,13 +5,13 @@ import { CloseOutlined, PlayCircleOutlined, VideoCameraOutlined } from '@ant-des
 export const getYouTubeEmbedUrl = (url) => {
     if (!url) return null;
     const trimmed = url.trim();
-    if (trimmed.includes('youtube.com/embed/')) {
-        return trimmed.includes('autoplay=1') ? trimmed : `${trimmed}${trimmed.includes('?') ? '&' : '?'}autoplay=1&rel=0`;
+    if (trimmed.includes('youtube.com/embed/') || trimmed.includes('youtube-nocookie.com/embed/')) {
+        return trimmed.includes('autoplay=1') ? trimmed : `${trimmed}${trimmed.includes('?') ? '&' : '?'}autoplay=1&rel=0&enablejsapi=1`;
     }
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
     const match = trimmed.match(regExp);
     if (match && match[2].length === 11) {
-        return `https://www.youtube.com/embed/${match[2]}?autoplay=1&rel=0&modestbranding=1`;
+        return `https://www.youtube-nocookie.com/embed/${match[2]}?autoplay=1&rel=0&modestbranding=1&enablejsapi=1`;
     }
     return null;
 };
@@ -46,6 +46,9 @@ export default function TrailerModal({ isOpen, onClose, movie }) {
     const trailerUrl = movie.trailer_url || '';
     const youtubeEmbed = getYouTubeEmbedUrl(trailerUrl);
     const isDirectVideo = isDirectVideoUrl(trailerUrl);
+    const directYoutubeUrl = trailerUrl.startsWith('http')
+        ? trailerUrl
+        : `https://www.youtube.com/results?search_query=${encodeURIComponent(movie.name + ' official trailer')}`;
 
     return (
         <div 
@@ -71,13 +74,26 @@ export default function TrailerModal({ isOpen, onClose, movie }) {
                             </span>
                         </div>
                     </div>
-                    <button
-                        onClick={onClose}
-                        className="w-9 h-9 rounded-full bg-white/10 hover:bg-red-600 text-white flex items-center justify-center transition-all duration-200"
-                        title="Đóng trailer (Esc)"
-                    >
-                        <CloseOutlined className="text-base" />
-                    </button>
+                    <div className="flex items-center space-x-2">
+                        {directYoutubeUrl && (
+                            <a
+                                href={directYoutubeUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="hidden sm:inline-flex items-center space-x-1.5 bg-red-600/20 hover:bg-red-600 text-red-300 hover:text-white px-3 py-1.5 rounded-full text-xs font-medium border border-red-500/30 transition-all"
+                                title="Mở xem trực tiếp trên ứng dụng YouTube"
+                            >
+                                <span>▶ Mở trên YouTube</span>
+                            </a>
+                        )}
+                        <button
+                            onClick={onClose}
+                            className="w-9 h-9 rounded-full bg-white/10 hover:bg-red-600 text-white flex items-center justify-center transition-all duration-200"
+                            title="Đóng trailer (Esc)"
+                        >
+                            <CloseOutlined className="text-base" />
+                        </button>
+                    </div>
                 </div>
 
                 {/* Video Player Area (16:9 Aspect Ratio) */}
@@ -112,7 +128,17 @@ export default function TrailerModal({ isOpen, onClose, movie }) {
                         <div className="text-center p-8 space-y-3">
                             <VideoCameraOutlined className="text-5xl text-gray-500" />
                             <p className="text-gray-300 font-medium">Trailer của bộ phim này đang được cập nhật!</p>
-                            <p className="text-xs text-gray-500">Vui lòng quay lại sau ít phút hoặc tiến hành đặt vé xem phim.</p>
+                            <p className="text-xs text-gray-500">Vui lòng quay lại sau ít phút hoặc xem trực tiếp trên YouTube.</p>
+                            <div className="pt-2">
+                                <a
+                                    href={`https://www.youtube.com/results?search_query=${encodeURIComponent(movie.name + ' official trailer')}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center space-x-2 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold px-4 py-2 rounded-full transition-all shadow"
+                                >
+                                    <span>🔍 Tìm trailer "{movie.name}" trên YouTube</span>
+                                </a>
+                            </div>
                         </div>
                     )}
                 </div>

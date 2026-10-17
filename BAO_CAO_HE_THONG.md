@@ -105,6 +105,7 @@ mindmap
 * **Xem Trailer Video Ngắn:**
   * Mỗi poster phim đều tích hợp nút **`▶ Xem Trailer`**.
   * Khi bấm vào, một hộp thoại Popup sắc nét hiển thị đoạn trailer giới thiệu phim trực tiếp trên màn hình, giúp khách xem nhanh nội dung trước khi quyết định đặt vé.
+  * Tích hợp chế độ phát **`youtube-nocookie`** bảo mật và chống chặn iframe, bổ sung nút **`▶ Mở trên YouTube`** để mở nhanh trên App YouTube và công cụ tìm kiếm tự động khi video đang cập nhật.
 
 #### 1.2. Hệ Thống Định Vị Cụm Rạp CGV Qua GPS
 * **Định vị vị trí khách hàng:** Tích hợp nút **`📍 Mở vị trí tìm rạp gần nhất`**, sử dụng định vị GPS trình duyệt để xác định tọa độ hiện tại của người dùng.

@@ -1,6 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
-import { HomeOutlined, HistoryOutlined } from '@ant-design/icons';
+import {
+    HomeOutlined,
+    HistoryOutlined,
+    QrcodeOutlined,
+    TrophyOutlined,
+    CheckCircleFilled,
+    DownloadOutlined,
+} from '@ant-design/icons';
+import { QRCode, Tag, message } from 'antd';
 import Header from '../Components/Header';
 import Footer from '../Components/Footer';
 import momoLogo from '../assets/images/momo-logo.png';
@@ -138,33 +146,93 @@ function PaymentSuccess() {
         );
     }
 
+    const qrDataString = JSON.stringify({
+        ticketId: paymentData?.id || '',
+        movie: paymentData?.movieName || '',
+        branch: paymentData?.branchName || 'CGV Cinema',
+        seats: paymentData?.seatId || '',
+        date: formatDate(paymentData?.date),
+        time: paymentData?.time || '',
+        code: (paymentData?.id || 'TICKET').substring(0, 8).toUpperCase(),
+    });
+
     return (
-        <div className="bg-[#161616] min-h-screen flex flex-col">
+        <div className="bg-[#161616] min-h-screen flex flex-col relative overflow-hidden">
             <Header />
 
             <div className="flex-grow flex items-center justify-center px-4 py-8 mt-20">
                 <div className="w-full max-w-lg">
-                    {/* Success icon and message */}
-                    <div className="flex flex-col items-center justify-center mb-6">
-                        <div className="w-24 h-24 rounded-full bg-[#4CAF50] flex items-center justify-center mb-5">
-                            <svg className="w-14 h-14 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
-                            </svg>
+                    {/* Success icon and celebratory congratulations */}
+                    <div className="flex flex-col items-center justify-center mb-6 text-center">
+                        <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-green-600 to-emerald-400 flex items-center justify-center mb-4 shadow-xl shadow-green-500/20 animate-bounce">
+                            <CheckCircleFilled className="text-white text-5xl" />
                         </div>
-                        <h1 className="text-3xl font-bold text-white text-center">Thanh toán thành công!</h1>
-                        <p className="text-gray-400 mt-2 text-center">Cảm ơn bạn đã đặt vé xem phim tại StreamPhim</p>
+                        <div className="inline-block bg-green-500/10 border border-green-500/30 px-3 py-1 rounded-full text-green-400 text-xs font-bold uppercase tracking-wider mb-2">
+                            Xác nhận đặt vé thành công
+                        </div>
+                        <h1 className="text-3xl font-extrabold text-white">
+                            Chúc mừng bạn đã mua vé thành công! 🎉
+                        </h1>
+                        <p className="text-gray-300 mt-2 text-sm max-w-md">
+                            Mã vé và mã QR điện tử đã được kích hoạt. Bạn có thể lưu mã QR để xuất trình tại rạp.
+                        </p>
                     </div>
 
                     {/* Payment info card */}
-                    <div className="bg-[#1a1a1a] rounded-lg overflow-hidden shadow-lg">
+                    <div className="bg-[#1a1a1a] rounded-2xl overflow-hidden shadow-2xl border border-gray-800">
+                        {/* QR Code Section for Fast Check-In */}
+                        <div className="px-6 py-6 border-b border-[#333] flex flex-col items-center bg-gradient-to-b from-[#242424] to-[#1a1a1a] text-center">
+                            <div className="flex items-center gap-2 mb-3 text-yellow-400 font-bold text-sm tracking-wide">
+                                <QrcodeOutlined className="text-lg" /> MÃ QR VÉ ĐIỆN TỬ VÀO RẠP
+                            </div>
+                            <div className="p-3 bg-white rounded-xl shadow-xl border-4 border-gray-100 mb-3">
+                                <QRCode
+                                    value={qrDataString}
+                                    size={185}
+                                    bordered={false}
+                                />
+                            </div>
+                            <div className="font-mono text-white text-base tracking-widest font-extrabold bg-[#2a2a2a] px-5 py-1.5 rounded-lg border border-gray-700 mb-2">
+                                MÃ VÉ: {(paymentData?.id || 'TICKET').substring(0, 8).toUpperCase()}
+                            </div>
+                            <p className="text-gray-400 text-xs max-w-xs">
+                                Xuất trình mã QR này tại cổng soát vé hoặc máy in vé tự động của rạp.
+                            </p>
+
+                            {/* Loyalty Points Earned Box */}
+                            <div className="mt-4 w-full bg-gradient-to-r from-amber-950/40 via-yellow-900/30 to-amber-950/40 border border-yellow-600/50 rounded-xl p-3 flex items-center justify-between">
+                                <div className="flex items-center gap-3 text-left">
+                                    <div className="w-9 h-9 rounded-full bg-yellow-500/20 flex items-center justify-center text-yellow-400 text-lg">
+                                        <TrophyOutlined />
+                                    </div>
+                                    <div>
+                                        <div className="text-white text-xs font-bold">Thành Viên Thân Thiết</div>
+                                        <div className="text-yellow-400 text-xs font-semibold">
+                                            +{getSeatArray(paymentData?.seatId).length * 100 || 100} Điểm kinh nghiệm (XP) đã được tích lũy!
+                                        </div>
+                                    </div>
+                                </div>
+                                <Tag color="gold" className="font-bold">ĐÃ TÍCH LŨY</Tag>
+                            </div>
+                        </div>
+
                         {/* Movie ticket info */}
                         <div className="px-6 py-5 border-b border-[#333]">
-                            <h2 className="text-xl text-[#ff4d4f] font-medium mb-4">Thông tin đặt vé</h2>
+                            <h2 className="text-lg text-[#ff4d4f] font-bold mb-4 flex items-center gap-2">
+                                🎬 Chi tiết vé xem phim
+                            </h2>
 
                             {paymentData?.movieName && (
                                 <div className="mb-3 flex flex-col">
-                                    <span className="text-gray-400 text-sm">Phim</span>
-                                    <span className="text-white text-base font-medium">{paymentData.movieName}</span>
+                                    <span className="text-gray-400 text-xs">Tên phim</span>
+                                    <span className="text-white text-lg font-bold text-red-400">{paymentData.movieName}</span>
+                                </div>
+                            )}
+
+                            {paymentData?.branchName && (
+                                <div className="mb-3 flex flex-col">
+                                    <span className="text-gray-400 text-xs">Chi nhánh rạp</span>
+                                    <span className="text-white text-sm font-semibold text-yellow-300">📍 {paymentData.branchName}</span>
                                 </div>
                             )}
 
@@ -259,7 +327,12 @@ function PaymentSuccess() {
                                     <div className="mb-3">
                                         <span className="text-gray-400 text-sm">Phương thức thanh toán</span>
                                         <div className="flex items-center gap-2 mt-1">
-                                            {paymentData.paymentMethod === 'momo' ? (
+                                            {paymentData.paymentMethod === 'vietqr' || paymentData.paymentMethod === 'banking' ? (
+                                                <div className="flex items-center gap-2">
+                                                    <span className="px-2 py-0.5 bg-[#008848] text-white font-bold rounded text-xs">VCB</span>
+                                                    <span className="text-white font-medium">VietQR (Vietcombank - 1336991507)</span>
+                                                </div>
+                                            ) : paymentData.paymentMethod === 'momo' ? (
                                                 <div className="flex items-center gap-2">
                                                     <img src={momoLogo} alt="MoMo" className="h-6" />
                                                     <span className="text-white">MoMo</span>
@@ -270,7 +343,7 @@ function PaymentSuccess() {
                                                     <span className="text-white">VNPay</span>
                                                 </div>
                                             ) : (
-                                                <span className="text-white">{paymentData.paymentMethod}</span>
+                                                <span className="text-white capitalize">{paymentData.paymentMethod}</span>
                                             )}
                                         </div>
                                     </div>

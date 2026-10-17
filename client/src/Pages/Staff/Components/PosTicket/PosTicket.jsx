@@ -30,8 +30,15 @@ import {
     requestStaffGetSeats,
     requestGetActiveServices,
     requestStaffSellTicket,
+    requestGetAllBranches,
 } from '../../../../config/request';
+import {
+    calculateSeatsTotal,
+    getSeatPrice,
+    ROW_PRICE_CONFIG,
+} from '../../../../utils/seatPricing';
 import TicketModal from '../TicketModal/TicketModal';
+
 import styles from './PosTicket.module.scss';
 
 const DEFAULT_SHOWTIMES = ['09:00', '11:30', '14:15', '17:00', '19:30', '21:45', '23:15'];
@@ -41,6 +48,8 @@ const SEATS_PER_ROW = 12;
 const PosTicket = () => {
     const [movies, setMovies] = useState([]);
     const [services, setServices] = useState([]);
+    const [branches, setBranches] = useState([]);
+    const [selectedBranch, setSelectedBranch] = useState(null);
     const [selectedMovie, setSelectedMovie] = useState(null);
     const [selectedDate, setSelectedDate] = useState(dayjs().format('YYYY-MM-DD'));
     const [selectedTime, setSelectedTime] = useState(DEFAULT_SHOWTIMES[2]);
@@ -60,11 +69,25 @@ const PosTicket = () => {
     const [createdTicket, setCreatedTicket] = useState(null);
     const [ticketModalVisible, setTicketModalVisible] = useState(false);
 
-    // Fetch movies and services on mount
+    // Fetch movies, services and cinema branches on mount
     useEffect(() => {
         fetchMovies();
         fetchServices();
+        fetchBranches();
     }, []);
+
+    const fetchBranches = async () => {
+        try {
+            const res = await requestGetAllBranches();
+            const list = res?.metadata || [];
+            setBranches(list);
+            if (list.length > 0) {
+                setSelectedBranch(list[0]);
+            }
+        } catch (error) {
+            console.log('Error fetching branches:', error);
+        }
+    };
 
     // Fetch seats whenever movie, date, or time changes
     useEffect(() => {
@@ -156,9 +179,10 @@ const PosTicket = () => {
         }
     };
 
-    // Calculations
+    // Calculations (tính giá vé theo từng hàng ghế)
     const ticketPrice = parseInt(selectedMovie?.price || 95000, 10);
-    const totalTicketPrice = ticketPrice * selectedSeatCodes.length;
+    const totalTicketPrice = calculateSeatsTotal(ticketPrice, selectedSeatCodes);
+
 
     const totalServicePrice = Object.values(selectedServices).reduce(
         (sum, item) => sum + parseInt(item.price || 0, 10) * item.quantity,
@@ -190,6 +214,8 @@ const PosTicket = () => {
                 paymentMethod,
                 customerName: customerName.trim() || 'Khách tại quầy',
                 customerPhone: customerPhone.trim(),
+                branchId: selectedBranch?.id || null,
+                branchName: selectedBranch?.name || 'CGV Cinema',
             };
 
             const res = await requestStaffSellTicket(payload);
@@ -201,7 +227,7 @@ const PosTicket = () => {
                 ticketCode: res?.metadata?.payment?.id?.substring(0, 8).toUpperCase(),
                 movie: selectedMovie,
                 seats: selectedSeatCodes,
-                room: 'Phòng chiếu 1 (StreamPhim Cinema)',
+                room: `Phòng chiếu 1 (${selectedBranch?.name || 'CGV Cinema'})`,
                 date: dayjs(selectedDate).format('DD/MM/YYYY'),
                 time: selectedTime,
                 totalPrice: totalAmount,
@@ -236,6 +262,23 @@ const PosTicket = () => {
                         {/* Movie & Showtime Filters */}
                         <div className={styles.filtersBar}>
                             <Row gutter={[12, 12]}>
+                                <Col xs={24} md={12}>
+                                    <label className={styles.filterLabel}>📍 Chi nhánh rạp CGV:</label>
+                                    <Select
+                                        size="large"
+                                        style={{ width: '100%' }}
+                                        value={selectedBranch?.id}
+                                        onChange={(val) => {
+                                            const found = branches.find((b) => b.id === val);
+                                            setSelectedBranch(found);
+                                        }}
+                                        options={branches.map((b) => ({
+                                            value: b.id,
+                                            label: `🏢 ${b.name} (${b.province})`,
+                                        }))}
+                                        placeholder="Chọn chi nhánh rạp"
+                                    />
+                                </Col>
                                 <Col xs={24} md={12}>
                                     <label className={styles.filterLabel}>1. Chọn phim đang chiếu:</label>
                                     <Select
@@ -310,10 +353,11 @@ const PosTicket = () => {
                                                             type="button"
                                                             className={`${styles.seatBtn} ${seatClass}`}
                                                             onClick={() => handleSeatClick(seatCode, status)}
-                                                            title={`Ghế ${seatCode}: ${status === 'booked' ? 'Đã đặt' : status === 'maintenance' ? 'Đang bảo trì' : 'Còn trống'}`}
+                                                            title={`Ghế ${seatCode}: ${getSeatPrice(ticketPrice, seatCode).toLocaleString()}đ (${ROW_PRICE_CONFIG[row]?.name || 'Ghế'}) - ${status === 'booked' ? 'Đã đặt' : status === 'maintenance' ? 'Đang bảo trì' : 'Còn trống'}`}
                                                         >
                                                             {seatNum}
                                                         </button>
+
                                                     );
                                                 })}
                                             </div>
@@ -401,17 +445,33 @@ const PosTicket = () => {
 
                         <Divider style={{ margin: '14px 0', borderColor: 'rgba(255,255,255,0.1)' }} />
 
-                        {/* Selected Seats */}
+                        {/* Selected Seats with Tier Pricing */}
                         <div className={styles.lineItem}>
                             <span className={styles.lineLabel}>Ghế đã chọn ({selectedSeatCodes.length}):</span>
                             <span className={styles.lineSeats}>
                                 {selectedSeatCodes.length > 0 ? selectedSeatCodes.join(', ') : 'Chưa chọn ghế'}
                             </span>
                         </div>
+                        {selectedSeatCodes.length > 0 && (
+                            <div style={{ padding: '6px 0 6px 8px', fontSize: 12, color: '#aaa', borderLeft: '2px solid #ef4444', marginBottom: 8 }}>
+                                {selectedSeatCodes.map((code) => {
+                                    const r = code.charAt(0);
+                                    const cfg = ROW_PRICE_CONFIG[r] || {};
+                                    const p = getSeatPrice(ticketPrice, code);
+                                    return (
+                                        <div key={code} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+                                            <span>• Ghế <strong style={{ color: '#fff' }}>{code}</strong> ({cfg.tag || 'Ghế'}):</span>
+                                            <span style={{ color: '#f59e0b', fontFamily: 'monospace' }}>{p.toLocaleString()}đ</span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
                         <div className={styles.lineItem}>
-                            <span className={styles.lineLabel}>Tiền vé:</span>
+                            <span className={styles.lineLabel}>Tổng tiền vé:</span>
                             <span className={styles.lineValue}>{totalTicketPrice.toLocaleString()}đ</span>
                         </div>
+
 
                         {/* Selected Snacks */}
                         {Object.values(selectedServices).length > 0 && (
@@ -492,6 +552,27 @@ const PosTicket = () => {
                                         <strong className={styles.changeAmount}>
                                             {changeToReturn.toLocaleString()}đ
                                         </strong>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* VietQR Display if Banking selected */}
+                            {paymentMethod === 'banking' && (
+                                <div style={{ background: 'rgba(0, 136, 72, 0.12)', border: '1px solid #008848', borderRadius: 10, padding: 12, marginTop: 12, textAlign: 'center' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 8 }}>
+                                        <span style={{ background: '#008848', color: '#fff', padding: '2px 8px', borderRadius: 4, fontWeight: 'bold', fontSize: 11 }}>VCB</span>
+                                        <span style={{ fontWeight: 'bold', color: '#fff', fontSize: 13 }}>Mã VietQR Chuyển Tiền Thật</span>
+                                    </div>
+                                    <img
+                                        src={`https://img.vietqr.io/image/vietcombank-1336991507-compact2.png?amount=${totalAmount}&addInfo=POS%20VE%20CGV&accountName=LAI%20VAN%20TU`}
+                                        alt="VietQR POS Vietcombank"
+                                        style={{ width: 180, height: 'auto', margin: '0 auto', borderRadius: 8, border: '2px solid #008848', background: '#fff', display: 'block' }}
+                                    />
+                                    <div style={{ marginTop: 8, fontSize: 12, color: '#ccc' }}>
+                                        <div>Ngân hàng: <strong>Vietcombank</strong></div>
+                                        <div>STK: <strong style={{ color: '#2ed573', fontSize: 14 }}>1336991507</strong></div>
+                                        <div>Chủ TK: <strong>LẠI VĂN TÚ</strong></div>
+                                        <div>Số tiền: <strong style={{ color: '#ff4d4f', fontSize: 14 }}>{totalAmount.toLocaleString()}đ</strong></div>
                                     </div>
                                 </div>
                             )}

@@ -19,6 +19,11 @@ const Room = connect.define(
             allowNull: false,
             comment: 'Rạp trực thuộc (VD: CGV Vincom, Lotte Cinema)',
         },
+        cinemaBranchId: {
+            type: DataTypes.UUID,
+            allowNull: true,
+            comment: 'ID chi nhánh rạp CGV',
+        },
         totalRows: {
             type: DataTypes.INTEGER,
             allowNull: false,

@@ -5,6 +5,7 @@ const { authUser, authAdmin, asyncHandler } = require('../auth/checkAuth');
 
 const controllerPayments = require('../controller/payments.controller');
 
+router.get('/bank-config', asyncHandler(controllerPayments.getBankConfig));
 router.post('/create', authUser, asyncHandler(controllerPayments.createPayment));
 router.get('/check-payment-momo', asyncHandler(controllerPayments.checkPaymentMomo));
 router.get('/check-payment-vnpay', asyncHandler(controllerPayments.checkPaymentVNPay));

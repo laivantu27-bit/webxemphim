@@ -40,4 +40,10 @@ router.get('/api/admin', authAdmin, (req, res) => {
 // Add dashboard route for admin
 router.get('/dashboard', asyncHandler(controllerUser.getDashboard));
 
+// User Loyalty Level, XP and Student Verification routes
+router.get('/xp-info', authUser, asyncHandler(controllerUser.getUserXPInfo));
+router.post('/student-verify', authUser, asyncHandler(controllerUser.submitStudentVerification));
+router.post('/approve-student', authUser, authAdmin, asyncHandler(controllerUser.adminApproveStudent));
+router.post('/redeem-reward', authUser, asyncHandler(controllerUser.redeemReward));
+
 module.exports = router;

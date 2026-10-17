@@ -91,6 +91,7 @@ function ManagerProduct() {
             price: record.price,
             quality: record.quality,
             year: record.year,
+            trailer_url: record.trailer_url || '',
             dateStart: record.dateStart ? dayjs(record.dateStart) : null,
             dateEnd: record.dateEnd ? dayjs(record.dateEnd) : null,
         });
@@ -236,6 +237,24 @@ function ManagerProduct() {
             title: 'Chất lượng',
             dataIndex: 'quality',
             key: 'quality',
+        },
+        {
+            title: 'Trailer',
+            dataIndex: 'trailer_url',
+            key: 'trailer_url',
+            render: (trailer_url) =>
+                trailer_url ? (
+                    <a
+                        href={trailer_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{ color: '#ff4d4f', fontWeight: 600 }}
+                    >
+                        ▶ Xem
+                    </a>
+                ) : (
+                    <span style={{ color: '#999' }}>Chưa có</span>
+                ),
         },
         {
             title: 'Thao tác',
@@ -425,6 +444,14 @@ function ManagerProduct() {
                         rules={[{ required: true, message: 'Vui lòng nhập mô tả phim!' }]}
                     >
                         <TextArea rows={4} placeholder="Nhập mô tả chi tiết về phim" />
+                    </Form.Item>
+
+                    <Form.Item
+                        name="trailer_url"
+                        label="Link Trailer / Video (YouTube hoặc MP4)"
+                        rules={[{ required: false }]}
+                    >
+                        <Input placeholder="Ví dụ: https://www.youtube.com/watch?v=... hoặc https://domain.com/video.mp4" />
                     </Form.Item>
 
                     <div className={cx('form-row')}>

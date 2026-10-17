@@ -43,7 +43,15 @@ const seat = connect.define(
     {
         freezeTableName: true,
         timestamps: true,
+        indexes: [
+            {
+                unique: true,
+                fields: ['movieId', 'date', 'time', 'seat_code'],
+                name: 'unique_movie_date_time_seat',
+            },
+        ],
     },
 );
+
 
 module.exports = seat;

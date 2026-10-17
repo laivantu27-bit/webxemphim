@@ -12,6 +12,7 @@ router.post('/sell-ticket', asyncHandler(staffController.sellTicketAtCounter));
 
 // 3. Quản lý phòng & ghế bảo trì
 router.get('/rooms', asyncHandler(staffController.getRooms));
+router.post('/room-branch', asyncHandler(staffController.updateRoomBranch));
 router.get('/seats', asyncHandler(staffController.getSeatsByShowtime));
 router.post('/seat-maintenance', asyncHandler(staffController.updateSeatMaintenance));
 

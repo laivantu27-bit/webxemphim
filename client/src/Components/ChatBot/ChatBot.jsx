@@ -8,9 +8,11 @@ import {
     AudioMutedOutlined,
     SoundOutlined,
     ReloadOutlined,
+    CustomerServiceOutlined,
 } from '@ant-design/icons';
 import { message as antMessage } from 'antd';
 import { requestChatbot } from '../../config/request';
+import TrailerModal from '../TrailerModal/TrailerModal';
 import styles from './ChatBot.module.scss';
 
 const ChatBot = () => {
@@ -22,6 +24,7 @@ const ChatBot = () => {
     const [transcriptPreview, setTranscriptPreview] = useState('');
     const [autoSpeak, setAutoSpeak] = useState(false);
     const [currentlySpeakingId, setCurrentlySpeakingId] = useState(null);
+    const [selectedTrailerMovie, setSelectedTrailerMovie] = useState(null);
 
     const messagesEndRef = useRef(null);
     const navigate = useNavigate();
@@ -31,8 +34,15 @@ const ChatBot = () => {
     const initialGreeting = {
         id: 'init-1',
         sender: 'bot',
-        text: 'Xin chào! 👋 Tôi là trợ lý AI của rạp StreamPhim.\n\nTôi có thể giúp bạn:\n• 🔍 Tìm kiếm bộ phim yêu thích\n• 💺 Kiểm tra ghế và hướng dẫn đặt vé\n• 🎙️ Hỗ trợ giọng nói nếu bạn không muốn bấm chữ!',
-        actions: ['🎬 Phim đang chiếu', '💺 Hỗ trợ đặt ghế', '🍿 Giá bắp nước', '❓ Hướng dẫn'],
+        text: 'Xin chào quý khách! 👋 Em là Trợ lý AI của rạp StreamPhim.\n\nEm có thể giúp quý khách:\n• 🔍 Tra cứu chính xác các phim đang chiếu tại rạp\n• 💺 Kiểm tra số ghế trống & hỗ trợ đặt vé nhanh\n• 🎙️ Bấm nút Micro 🔴 bên dưới để NÓI (rất tiện cho người lớn tuổi, không cần gõ chữ)\n• 🔊 Bật biểu tượng Loa phía trên để nghe đọc to câu trả lời!',
+        actions: [
+            '🎬 Phim đang chiếu',
+            '⭐ Phim hoạt hình',
+            '🔥 Phim hành động',
+            '💺 Hướng dẫn đặt vé',
+            '🎫 Bảng giá từng hàng ghế',
+            '🍿 Giá bắp nước',
+        ],
     };
 
     const toggleChat = () => {
@@ -73,7 +83,7 @@ const ChatBot = () => {
         // Clean markdown / emojis for speech
         const cleanText = text
             .replace(/[•\*\#\_\~]/g, '')
-            .replace(/🎬|🍿|💺|🔍|👋|🎟️|🎫|💡/g, '')
+            .replace(/🎬|🍿|💺|🔍|👋|🎟️|🎫|💡|⭐|🔥|🔴|🔊/g, '')
             .trim();
 
         const utterance = new SpeechSynthesisUtterance(cleanText);
@@ -110,7 +120,7 @@ const ChatBot = () => {
         }
     };
 
-    // Speech Recognition setup (Voice input)
+    // Speech Recognition setup (Voice input for elderly & general users)
     useEffect(() => {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (SpeechRecognition) {
@@ -121,7 +131,7 @@ const ChatBot = () => {
 
             recognition.onstart = () => {
                 setIsListening(true);
-                setTranscriptPreview('Đang nghe...');
+                setTranscriptPreview('Đang nghe giọng nói của bạn... Hãy nói tên phim hoặc yêu cầu!');
             };
 
             recognition.onresult = (event) => {
@@ -143,7 +153,7 @@ const ChatBot = () => {
                     setInputValue(finalTranscript);
                     setIsListening(false);
                     setTranscriptPreview('');
-                    // Auto-send voice input
+                    // Auto-send recognized voice text
                     handleSend(finalTranscript);
                 }
             };
@@ -153,9 +163,9 @@ const ChatBot = () => {
                 setIsListening(false);
                 setTranscriptPreview('');
                 if (event.error === 'not-allowed') {
-                    antMessage.error('Vui lòng cấp quyền truy cập Micro trên trình duyệt để sử dụng giọng nói!');
+                    antMessage.error('Vui lòng cho phép trình duyệt sử dụng Micro để nói!');
                 } else if (event.error !== 'no-speech') {
-                    antMessage.warning('Chưa nhận diện được giọng nói, vui lòng thử lại gần micro hơn!');
+                    antMessage.warning('Chưa nhận rõ giọng nói, bạn vui lòng nói lại gần micro hơn nhé!');
                 }
             };
 
@@ -180,7 +190,7 @@ const ChatBot = () => {
     const toggleListening = () => {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SpeechRecognition) {
-            antMessage.warning('Trình duyệt không hỗ trợ nhận diện giọng nói. Vui lòng dùng Chrome hoặc Edge!');
+            antMessage.warning('Trình duyệt không hỗ trợ nhận diện giọng nói. Vui lòng mở bằng Chrome hoặc Cốc Cốc, Edge!');
             return;
         }
 
@@ -236,7 +246,7 @@ const ChatBot = () => {
 
             setMessages((prev) => [...prev, newBotMsg]);
 
-            // Auto-speak if enabled or user just spoke
+            // Auto-speak if enabled
             if (autoSpeak) {
                 setTimeout(() => {
                     speakText(botText, botMsgId);
@@ -249,7 +259,7 @@ const ChatBot = () => {
                 {
                     id: Date.now() + 1,
                     sender: 'bot',
-                    text: 'Xin lỗi, hệ thống đang bận. Bạn vui lòng thử lại hoặc chọn từ gợi ý bên dưới nhé!',
+                    text: 'Xin lỗi bạn, hệ thống đang bận. Bạn vui lòng thử lại hoặc chọn từ các gợi ý bên dưới nhé!',
                 },
             ]);
         } finally {
@@ -274,7 +284,7 @@ const ChatBot = () => {
                     <div className={styles.header}>
                         <div className={styles.headerInfo}>
                             <h3 className={styles.title}>🎬 StreamPhim AI</h3>
-                            <p className={styles.subtitle}>Tìm phim & Đặt ghế bằng giọng nói</p>
+                            <p className={styles.subtitle}>Tư vấn phim & Đặt vé giọng nói</p>
                         </div>
                         <div className={styles.headerActions}>
                             <button
@@ -283,23 +293,23 @@ const ChatBot = () => {
                                     const next = !autoSpeak;
                                     setAutoSpeak(next);
                                     if (!next) stopSpeaking();
-                                    antMessage.info(next ? 'Đã bật tự động đọc to tin nhắn' : 'Đã tắt tự động đọc');
+                                    antMessage.info(next ? 'Đã bật chế độ tự động đọc to tin nhắn' : 'Đã tắt tự động đọc');
                                 }}
-                                title={autoSpeak ? 'Tắt đọc to' : 'Bật tự động đọc to'}
+                                title={autoSpeak ? 'Tắt đọc to' : 'Bật tự động đọc to cho người lớn tuổi'}
                             >
                                 <SoundOutlined />
                             </button>
                             <button
                                 className={styles.headerBtn}
                                 onClick={resetChat}
-                                title="Làm mới trò chuyện"
+                                title="Làm mới cuộc trò chuyện"
                             >
                                 <ReloadOutlined />
                             </button>
                             <button
                                 className={styles.headerBtn}
                                 onClick={toggleChat}
-                                title="Đóng chat"
+                                title="Đóng cửa sổ chat"
                             >
                                 <CloseOutlined />
                             </button>
@@ -324,7 +334,7 @@ const ChatBot = () => {
                                             <button
                                                 className={`${styles.speakBtn} ${currentlySpeakingId === msg.id ? styles.speaking : ''}`}
                                                 onClick={() => speakText(msg.text, msg.id)}
-                                                title={currentlySpeakingId === msg.id ? 'Dừng đọc' : 'Đọc tin nhắn này'}
+                                                title={currentlySpeakingId === msg.id ? 'Dừng đọc' : 'Đọc to tin nhắn này (🔊)'}
                                             >
                                                 <SoundOutlined />
                                             </button>
@@ -337,9 +347,9 @@ const ChatBot = () => {
                                     <div className={styles.seatCard}>
                                         <div className={styles.seatIcon}>💺</div>
                                         <div className={styles.seatDetails}>
-                                            <div className={styles.seatTitle}>Tình trạng ghế trống</div>
+                                            <div className={styles.seatTitle}>Tình trạng ghế trống tại rạp</div>
                                             <div className={styles.seatDesc}>
-                                                Phim <strong>{msg.seats[0].movieName}</strong> hiện còn{' '}
+                                                Phim <strong>{msg.seats[0].movieName}</strong> hiện đang còn{' '}
                                                 <span className={styles.seatCount}>{msg.seats[0].availableCount} ghế trống</span>.
                                             </div>
                                         </div>
@@ -355,13 +365,13 @@ const ChatBot = () => {
                                                     src={movie.thumb_url || movie.poster_url}
                                                     alt={movie.name}
                                                     onError={(e) => {
-                                                        e.target.src = 'https://via.placeholder.com/140x200?text=StreamPhim';
+                                                        e.target.src = 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=300&auto=format&fit=crop';
                                                     }}
                                                 />
                                                 <div className={styles.movieInfo}>
                                                     <h4 title={movie.name}>{movie.name}</h4>
                                                     <p className={styles.movieMeta}>
-                                                        {movie.year || '2024'} • {Number(movie.price || 95000).toLocaleString()}đ
+                                                        {movie.year || '2024'} • {Number(movie.price || 95000).toLocaleString('vi-VN')}đ
                                                     </p>
                                                     <button
                                                         className={styles.bookMovieBtn}
@@ -369,6 +379,14 @@ const ChatBot = () => {
                                                     >
                                                         🎟️ Đặt vé ngay
                                                     </button>
+                                                    {movie.trailer_url && (
+                                                        <button
+                                                            className={styles.trailerMovieBtn}
+                                                            onClick={() => setSelectedTrailerMovie(movie)}
+                                                        >
+                                                            🎬 Xem Trailer
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </div>
                                         ))}
@@ -383,10 +401,16 @@ const ChatBot = () => {
                                                 key={idx}
                                                 className={styles.actionBtn}
                                                 onClick={() => {
-                                                    if (typeof action === 'object' && action.type === 'book') {
-                                                        handleBooking(action.movieId);
+                                                    if (typeof action === 'object') {
+                                                        if (action.type === 'book') {
+                                                            handleBooking(action.movieId);
+                                                        } else if (action.type === 'trailer') {
+                                                            setSelectedTrailerMovie(action.movie);
+                                                        } else {
+                                                            handleActionClick(action.label);
+                                                        }
                                                     } else {
-                                                        handleActionClick(typeof action === 'string' ? action : action.label);
+                                                        handleActionClick(action);
                                                     }
                                                 }}
                                             >
@@ -419,7 +443,7 @@ const ChatBot = () => {
                                 <span></span><span></span><span></span><span></span><span></span>
                             </div>
                             <div className={styles.voiceText}>
-                                {transcriptPreview || 'Đang nghe giọng nói của bạn... Hãy nói tên phim hoặc yêu cầu!'}
+                                {transcriptPreview || 'Đang lắng nghe... Hãy nói tên bộ phim bạn muốn tìm!'}
                             </div>
                             <button className={styles.stopVoiceBtn} onClick={toggleListening}>
                                 Dừng
@@ -431,9 +455,11 @@ const ChatBot = () => {
                     <div className={styles.footer}>
                         <div className={styles.suggestions}>
                             <button onClick={() => handleSend('🎬 Phim đang chiếu')}>🎬 Phim đang chiếu</button>
-                            <button onClick={() => handleSend('💺 Hỗ trợ đặt ghế')}>💺 Hỗ trợ đặt ghế</button>
-                            <button onClick={() => handleSend('🍿 Giá bắp nước')}>🍿 Giá bắp nước</button>
-                            <button onClick={() => handleSend('❓ Hướng dẫn')}>❓ Hướng dẫn</button>
+                            <button onClick={() => handleSend('⭐ Phim hoạt hình')}>⭐ Hoạt hình / Trẻ em</button>
+                            <button onClick={() => handleSend('🔥 Phim hành động')}>🔥 Hành động hot</button>
+                            <button onClick={() => handleSend('💺 Hướng dẫn đặt vé')}>💺 Hướng dẫn đặt vé</button>
+                            <button onClick={() => handleSend('🎫 Bảng giá từng hàng ghế')}>🎫 Bảng giá ghế</button>
+                            <button onClick={() => handleSend('🍿 Giá bắp nước')}>🍿 Bắp nước</button>
                         </div>
 
                         <div className={styles.inputArea}>
@@ -447,7 +473,7 @@ const ChatBot = () => {
                             <button
                                 className={`${styles.micBtn} ${isListening ? styles.listening : ''}`}
                                 onClick={toggleListening}
-                                title={isListening ? 'Dừng ghi âm' : 'Nói bằng giọng nói'}
+                                title={isListening ? 'Dừng ghi âm' : 'Nói bằng giọng nói (Dành cho người lớn tuổi / không gõ chữ)'}
                             >
                                 <AudioOutlined />
                             </button>
@@ -468,11 +494,18 @@ const ChatBot = () => {
             <button
                 className={`${styles.floatingBtn} ${isOpen ? styles.hidden : ''}`}
                 onClick={toggleChat}
-                title="Trợ lý AI StreamPhim (Hỗ trợ giọng nói)"
+                title="Trợ lý AI rạp StreamPhim (Hỗ trợ giọng nói & Đọc to)"
             >
                 <div className={styles.floatingBadge}>AI</div>
                 <MessageOutlined className={styles.icon} />
             </button>
+
+            {/* Trailer Modal inside Chatbot */}
+            <TrailerModal
+                isOpen={!!selectedTrailerMovie}
+                onClose={() => setSelectedTrailerMovie(null)}
+                movie={selectedTrailerMovie}
+            />
         </div>
     );
 };

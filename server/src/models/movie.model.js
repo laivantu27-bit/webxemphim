@@ -39,6 +39,10 @@ const Movies = connect.define(
         poster_url: {
             type: DataTypes.STRING,
         },
+        trailer_url: {
+            type: DataTypes.STRING,
+            allowNull: true,
+        },
         time: {
             type: DataTypes.STRING,
             allowNull: false,

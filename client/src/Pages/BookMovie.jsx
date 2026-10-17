@@ -17,6 +17,10 @@ import {
     GiftOutlined,
     CreditCardOutlined,
     ShopOutlined,
+    CopyOutlined,
+    QrcodeOutlined,
+    SafetyCertificateFilled,
+    DownloadOutlined,
 } from '@ant-design/icons';
 import momoLogo from '../assets/images/momo-logo.png';
 import vnpayLogo from '../assets/images/vnpay-logo.png';
@@ -32,13 +36,22 @@ import {
     requestGetActiveVouchers,
     requestCheckVoucher,
 } from '../config/request';
+import {
+    calculateSeatsTotal,
+    getSeatPrice,
+    ROW_PRICE_CONFIG,
+} from '../utils/seatPricing';
 
 function BookMovie() {
     const [selectedDate, setSelectedDate] = useState(moment()); // Default to today's date
     const [selectedTime, setSelectedTime] = useState(null);
     const [selectedSeats, setSelectedSeats] = useState([]);
-    const [paymentMethod, setPaymentMethod] = useState(null);
+    const [paymentMethod, setPaymentMethod] = useState('vietqr');
     const [isModalVisible, setIsModalVisible] = useState(false);
+    const [isVietQrModalVisible, setIsVietQrModalVisible] = useState(false);
+    const [vietQrCode, setVietQrCode] = useState('');
+    const [qrCountdown, setQrCountdown] = useState(900);
+    const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
     const [movieDetails, setMovieDetails] = useState(null);
     const [availableDates, setAvailableDates] = useState([]);
     const [currentTime, setCurrentTime] = useState(moment());
@@ -113,6 +126,30 @@ function BookMovie() {
 
         return () => clearInterval(timer);
     }, []);
+
+    // Countdown timer for VietQR payment modal
+    useEffect(() => {
+        let timer = null;
+        if (isVietQrModalVisible && qrCountdown > 0) {
+            timer = setInterval(() => {
+                setQrCountdown((prev) => (prev > 0 ? prev - 1 : 0));
+            }, 1000);
+        }
+        return () => clearInterval(timer);
+    }, [isVietQrModalVisible, qrCountdown]);
+
+    const formatCountdown = (seconds) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    };
+
+    const handleCopy = (text, label) => {
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(text);
+        }
+        message.success(`Đã sao chép ${label}!`);
+    };
 
     // Map for Vietnamese day names
     const viDayNames = {
@@ -356,12 +393,20 @@ function BookMovie() {
             return;
         }
 
-        setIsModalVisible(true);
+        if (paymentMethod === 'vietqr') {
+            const randomCode = 'SP' + Math.floor(100000 + Math.random() * 900000);
+            setVietQrCode(randomCode);
+            setQrCountdown(900); // 15 phút
+            setIsVietQrModalVisible(true);
+        } else {
+            setIsModalVisible(true);
+        }
     };
 
-    // Price calculations
+    // Price calculations: giá từng hàng ghế khác nhau (ngồi đầu cao hơn ngồi sau)
     const ticketPrice = movieDetails?.price ? parseInt(movieDetails.price, 10) : 0;
-    const ticketTotal = selectedSeats.length * ticketPrice;
+    const ticketTotal = calculateSeatsTotal(ticketPrice, selectedSeats);
+
 
     // Selected services list with details
     const selectedServicesList = services
@@ -454,6 +499,7 @@ function BookMovie() {
     };
 
     const handlePaymentConfirm = async () => {
+        setIsSubmittingPayment(true);
         const data = {
             typePayment: paymentMethod,
             idMovie: movieDetails.id,
@@ -473,22 +519,20 @@ function BookMovie() {
                     window.open(res.metadata.payUrl);
                 } else {
                     message.success('Đã tạo liên kết thanh toán MoMo');
-                }
-            } else if (paymentMethod === 'vnpay') {
-                if (typeof res.metadata === 'string') {
-                    window.open(res.metadata);
-                } else {
-                    message.success('Đã chuyển tiếp VNPay');
+                    window.location.href = `/payment-success/${res.metadata.id}`;
                 }
             } else {
-                // Direct / Cash / Test
-                message.success('Đặt vé thành công!');
+                // VietQR / Direct / Cash / Bank Transfer
+                message.success('Thanh toán thành công! Vé của bạn đã được xuất.');
+                setIsVietQrModalVisible(false);
+                setIsModalVisible(false);
                 window.location.href = `/payment-success/${res.metadata.id}`;
             }
-            setIsModalVisible(false);
         } catch (error) {
             console.error(error);
             message.error(error.response?.data?.message || 'Có lỗi xảy ra khi tạo thanh toán');
+        } finally {
+            setIsSubmittingPayment(false);
         }
     };
 
@@ -509,35 +553,49 @@ function BookMovie() {
         return `${startDateStr} - ${endDateStr}`;
     };
 
-    // Render seat by seat status
+    // Render seat by seat status and row tier
     const renderSeat = (seat) => {
         const status = getSeatStatus(seat.seat_code);
-        let colorClass = '';
+        const row = seat.row;
+        const config = ROW_PRICE_CONFIG[row] || { name: 'Ghế Tiêu Chuẩn', extra: 0, tag: 'Ghế' };
+        const seatPrice = getSeatPrice(ticketPrice, seat.seat_code);
+        const priceLabel = Math.round(seatPrice / 1000) + 'k';
 
-        switch (status) {
-            case 'available':
-                colorClass = 'bg-[#444] text-white hover:bg-[#555] cursor-pointer';
-                break;
-            case 'selected':
-                colorClass = 'bg-red-600 text-white cursor-pointer';
-                break;
-            case 'booked':
-                colorClass = 'bg-gray-700 text-gray-500 cursor-not-allowed';
-                break;
-            default:
-                colorClass = 'bg-gray-700 text-gray-500 cursor-not-allowed';
+        let colorClass = '';
+        if (status === 'selected') {
+            colorClass = 'bg-red-600 text-white font-bold ring-2 ring-red-400 shadow-md shadow-red-600/50 cursor-pointer transform scale-[1.03]';
+        } else if (status === 'booked') {
+            colorClass = 'bg-[#1e1e24] border border-gray-800 text-gray-600 cursor-not-allowed opacity-40';
+        } else {
+            // available - phân loại màu theo hàng ghế
+            if (row === 'A' || row === 'B') {
+                colorClass = 'bg-[#2d2215] border border-amber-500/70 text-amber-200 hover:bg-[#45331e] hover:border-amber-400 cursor-pointer';
+            } else if (row === 'C' || row === 'D') {
+                colorClass = 'bg-[#221733] border border-purple-500/70 text-purple-200 hover:bg-[#34244f] hover:border-purple-400 cursor-pointer';
+            } else if (row === 'E') {
+                colorClass = 'bg-[#16233b] border border-blue-500/60 text-blue-200 hover:bg-[#203457] hover:border-blue-400 cursor-pointer';
+            } else {
+                colorClass = 'bg-[#132620] border border-emerald-500/60 text-emerald-200 hover:bg-[#1a382f] hover:border-emerald-400 cursor-pointer';
+            }
         }
 
         return (
             <div
                 key={seat.seat_code}
-                className={`h-10 flex items-center justify-center rounded text-sm ${colorClass}`}
+                className={`h-11 flex flex-col items-center justify-center rounded text-xs transition-all relative select-none ${colorClass}`}
                 onClick={() => handleSeatClick(seat.seat_code)}
+                title={`Ghế ${seat.seat_code}: ${seatPrice.toLocaleString('vi-VN')} đ (${config.name})`}
             >
-                {seat.seat_code}
+                <span className="font-semibold leading-none">{seat.seat_code}</span>
+                {status !== 'booked' && (
+                    <span className="text-[10px] opacity-80 leading-none mt-1 font-mono">
+                        {priceLabel}
+                    </span>
+                )}
             </div>
         );
     };
+
 
     return (
         <div className="bg-[#161616] min-h-screen text-white">
@@ -590,13 +648,34 @@ function BookMovie() {
                                         <p className="text-gray-300">
                                             Giờ chiếu: <span className="text-white font-medium">{selectedTime}</span>
                                         </p>
-                                        <p className="text-gray-300">
-                                            Ghế đã chọn: <span className="text-red-400 font-semibold">{selectedSeats.join(', ')}</span>
-                                        </p>
-                                        <div className="flex justify-between text-gray-300">
-                                            <span>Tiền vé ({selectedSeats.length} vé):</span>
-                                            <span className="text-white font-medium">{ticketTotal.toLocaleString('vi-VN')} đ</span>
+                                        <div>
+                                            <p className="text-gray-300 mb-1">
+                                                Ghế đã chọn ({selectedSeats.length}):
+                                            </p>
+                                            <div className="space-y-1.5 pl-2 max-h-36 overflow-y-auto mb-2 border-l-2 border-red-500/60">
+                                                {selectedSeats.map((code) => {
+                                                    const row = code.charAt(0);
+                                                    const config = ROW_PRICE_CONFIG[row] || {};
+                                                    const price = getSeatPrice(ticketPrice, code);
+                                                    return (
+                                                        <div key={code} className="flex justify-between text-xs text-gray-300">
+                                                            <span>
+                                                                • Ghế <strong className="text-white">{code}</strong>{' '}
+                                                                <span className="text-[11px] text-gray-400">({config.tag || 'Ghế'})</span>:
+                                                            </span>
+                                                            <span className="text-amber-400 font-mono font-medium">
+                                                                {price.toLocaleString('vi-VN')} đ
+                                                            </span>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
                                         </div>
+                                        <div className="flex justify-between text-gray-300 pt-1 border-t border-gray-800">
+                                            <span>Tổng tiền vé:</span>
+                                            <span className="text-white font-semibold">{ticketTotal.toLocaleString('vi-VN')} đ</span>
+                                        </div>
+
 
                                         {selectedServicesList.length > 0 && (
                                             <div className="pt-2 border-t border-gray-800">
@@ -747,21 +826,72 @@ function BookMovie() {
                                         <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-red-600"></div>
                                     </div>
                                 ) : Object.keys(seatsByRow).length > 0 ? (
-                                    <div className="mb-8">
-                                        {/* Seat layout by rows */}
-                                        {Object.entries(seatsByRow).map(([row, rowSeats]) => (
-                                            <div key={row} className="mb-2">
-                                                <div className="flex items-center mb-1">
-                                                    <div className="w-6 h-6 flex items-center justify-center bg-gray-700 text-white rounded mr-2">
-                                                        {row}
+                                    <div className="mb-6">
+                                        {/* Seat layout by rows with price tier info */}
+                                        {Object.entries(seatsByRow).map(([row, rowSeats]) => {
+                                            const config = ROW_PRICE_CONFIG[row] || { name: 'Tiêu chuẩn', extra: 0, tag: 'Ghế' };
+                                            const samplePrice = getSeatPrice(ticketPrice, `${row}1`);
+                                            const isTop = row === 'A' || row === 'B';
+                                            const isMid = row === 'C' || row === 'D';
+                                            const isEco = row === 'F' || row === 'G';
+
+                                            const badgeColor = isTop
+                                                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                                                : isMid
+                                                ? 'bg-purple-500/20 text-purple-300 border-purple-500/40'
+                                                : isEco
+                                                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                                                : 'bg-blue-500/20 text-blue-300 border-blue-500/40';
+
+                                            return (
+                                                <div key={row} className="mb-3">
+                                                    <div className="flex items-center justify-between mb-1 text-xs">
+                                                        <div className="flex items-center gap-2">
+                                                            <div
+                                                                className={`w-6 h-6 flex items-center justify-center font-bold text-white rounded shadow-sm text-xs ${
+                                                                    isTop
+                                                                        ? 'bg-amber-600'
+                                                                        : isMid
+                                                                        ? 'bg-purple-600'
+                                                                        : isEco
+                                                                        ? 'bg-emerald-600'
+                                                                        : 'bg-blue-600'
+                                                                }`}
+                                                            >
+                                                                {row}
+                                                            </div>
+                                                            <span className="text-gray-200 font-medium">
+                                                                Hàng {row}
+                                                            </span>
+                                                            <span
+                                                                className={`text-[11px] px-2 py-0.5 rounded-full border ${badgeColor} font-medium`}
+                                                            >
+                                                                {config.name}
+                                                            </span>
+                                                        </div>
+                                                        <div className="text-gray-400 font-mono text-[12px]">
+                                                            Giá:{' '}
+                                                            <span className="text-amber-400 font-semibold">
+                                                                {samplePrice.toLocaleString('vi-VN')} đ
+                                                            </span>
+                                                            {config.extra > 0 && (
+                                                                <span className="text-amber-400/90 ml-1 text-[11px]">
+                                                                    (+{config.extra.toLocaleString('vi-VN')} đ)
+                                                                </span>
+                                                            )}
+                                                            {config.extra < 0 && (
+                                                                <span className="text-emerald-400/90 ml-1 text-[11px]">
+                                                                    ({config.extra.toLocaleString('vi-VN')} đ)
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                     </div>
-                                                    <div className="h-px flex-1 bg-gray-700"></div>
+                                                    <div className="grid grid-cols-12 gap-2">
+                                                        {rowSeats.map((seat) => renderSeat(seat))}
+                                                    </div>
                                                 </div>
-                                                <div className="grid grid-cols-12 gap-2">
-                                                    {rowSeats.map((seat) => renderSeat(seat))}
-                                                </div>
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 ) : (
                                     <div className="text-center py-8 text-gray-400">
@@ -769,22 +899,73 @@ function BookMovie() {
                                     </div>
                                 )}
 
-                                <div className="flex flex-wrap gap-6 justify-center mb-6">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-6 h-6 bg-[#444] rounded"></div>
-                                        <span className="text-sm">Ghế trống</span>
+                                {/* Bảng phân loại & chú thích giá từng hàng ghế */}
+                                <div className="mt-6 pt-5 border-t border-gray-800">
+                                    <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider mb-3 text-center">
+                                        Phân Loại Giá Theo Hàng Ghế (Ngồi đầu giá cao hơn ngồi sau)
+                                    </p>
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4 text-xs">
+                                        <div className="p-2.5 rounded-lg bg-[#2b2214] border border-amber-500/60 flex items-center gap-2">
+                                            <div className="w-5 h-5 rounded bg-amber-500 flex items-center justify-center font-bold text-black text-[11px]">
+                                                A-B
+                                            </div>
+                                            <div>
+                                                <div className="font-semibold text-amber-300">VIP Hàng Đầu</div>
+                                                <div className="text-[11px] text-gray-300 font-mono">
+                                                    {getSeatPrice(ticketPrice, 'A1').toLocaleString('vi-VN')} đ
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="p-2.5 rounded-lg bg-[#241a35] border border-purple-500/60 flex items-center gap-2">
+                                            <div className="w-5 h-5 rounded bg-purple-500 flex items-center justify-center font-bold text-white text-[11px]">
+                                                C-D
+                                            </div>
+                                            <div>
+                                                <div className="font-semibold text-purple-300">Ghế Trung Tâm</div>
+                                                <div className="text-[11px] text-gray-300 font-mono">
+                                                    {getSeatPrice(ticketPrice, 'C1').toLocaleString('vi-VN')} đ
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="p-2.5 rounded-lg bg-[#162238] border border-blue-500/60 flex items-center gap-2">
+                                            <div className="w-5 h-5 rounded bg-blue-500 flex items-center justify-center font-bold text-white text-[11px]">
+                                                E
+                                            </div>
+                                            <div>
+                                                <div className="font-semibold text-blue-300">Tiêu Chuẩn</div>
+                                                <div className="text-[11px] text-gray-300 font-mono">
+                                                    {getSeatPrice(ticketPrice, 'E1').toLocaleString('vi-VN')} đ
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="p-2.5 rounded-lg bg-[#132822] border border-emerald-500/60 flex items-center gap-2">
+                                            <div className="w-5 h-5 rounded bg-emerald-500 flex items-center justify-center font-bold text-white text-[11px]">
+                                                F-G
+                                            </div>
+                                            <div>
+                                                <div className="font-semibold text-emerald-300">Ghế Tiết Kiệm</div>
+                                                <div className="text-[11px] text-gray-300 font-mono">
+                                                    {getSeatPrice(ticketPrice, 'G1').toLocaleString('vi-VN')} đ
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-6 h-6 bg-red-600 rounded"></div>
-                                        <span className="text-sm">Ghế đã chọn</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-6 h-6 bg-gray-700 rounded"></div>
-                                        <span className="text-sm">Ghế đã bán</span>
+
+                                    {/* Chú thích trạng thái ghế */}
+                                    <div className="flex flex-wrap gap-5 justify-center text-xs text-gray-400">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-4 h-4 bg-red-600 rounded"></div>
+                                            <span className="text-white">Đang chọn</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-4 h-4 bg-[#1e1e24] border border-gray-700 rounded opacity-50"></div>
+                                            <span>Đã bán / Đã đặt</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         )}
+
 
                         {selectedDate && selectedTime && selectedSeats.length > 0 && (
                             <>
@@ -1057,16 +1238,47 @@ function BookMovie() {
 
                                     <Radio.Group onChange={(e) => setPaymentMethod(e.target.value)} value={paymentMethod} className="w-full">
                                         <div className="space-y-3">
+                                            {/* 1. VietQR Vietcombank Real Payment */}
                                             <div
                                                 className={`
-                                                    flex items-center p-3 rounded-lg cursor-pointer border transition
+                                                    flex items-center p-3.5 rounded-xl cursor-pointer border-2 transition
+                                                    ${paymentMethod === 'vietqr' ? 'border-[#008848] bg-[#008848]/15 shadow-md' : 'border-gray-700 bg-[#262626] hover:border-gray-600'}
+                                                `}
+                                                onClick={() => setPaymentMethod('vietqr')}
+                                            >
+                                                <Radio value="vietqr" className="radio-primary" />
+                                                <div className="ml-3 flex items-center justify-between flex-grow">
+                                                    <div className="flex items-center">
+                                                        <div className="h-11 w-11 flex flex-col items-center justify-center mr-3 rounded-lg bg-[#008848] text-white font-bold text-xs shadow-md">
+                                                            <span>VCB</span>
+                                                            <span className="text-[9px] font-normal">QR</span>
+                                                        </div>
+                                                        <div>
+                                                            <div className="flex items-center gap-2">
+                                                                <p className="font-bold text-white text-base">Chuyển khoản VietQR (Vietcombank)</p>
+                                                                <Tag color="green" className="font-semibold text-[11px] m-0">
+                                                                    Thanh toán thật 100%
+                                                                </Tag>
+                                                            </div>
+                                                            <p className="text-xs text-emerald-400 font-medium">
+                                                                STK: <strong className="font-mono text-white">1336991507</strong> • Tự động điền số tiền & quét bằng mọi App Ngân hàng (VCB, MB, Techcombank, BIDV...) & Ví MoMo
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* 2. MoMo */}
+                                            <div
+                                                className={`
+                                                    flex items-center p-3 rounded-xl cursor-pointer border transition
                                                     ${paymentMethod === 'momo' ? 'border-red-500 bg-[#291e23]' : 'border-gray-700 bg-[#262626] hover:border-gray-600'}
                                                 `}
                                                 onClick={() => setPaymentMethod('momo')}
                                             >
                                                 <Radio value="momo" className="radio-primary" />
                                                 <div className="ml-4 flex items-center">
-                                                    <div className="h-10 w-10 flex items-center justify-center mr-3 rounded bg-[#d82d8b]">
+                                                    <div className="h-10 w-10 flex items-center justify-center mr-3 rounded-lg bg-[#d82d8b]">
                                                         <img src={momoLogo} alt="MoMo" className="h-7 w-7 object-contain" />
                                                     </div>
                                                     <div>
@@ -1076,40 +1288,22 @@ function BookMovie() {
                                                 </div>
                                             </div>
 
+                                            {/* 3. Direct Counter Payment */}
                                             <div
                                                 className={`
-                                                    flex items-center p-3 rounded-lg cursor-pointer border transition
-                                                    ${paymentMethod === 'vnpay' ? 'border-red-500 bg-[#1e2329]' : 'border-gray-700 bg-[#262626] hover:border-gray-600'}
-                                                `}
-                                                onClick={() => setPaymentMethod('vnpay')}
-                                            >
-                                                <Radio value="vnpay" className="radio-primary" />
-                                                <div className="ml-4 flex items-center">
-                                                    <div className="h-10 w-10 flex items-center justify-center mr-3 rounded bg-white">
-                                                        <img src={vnpayLogo} alt="VNPay" className="h-7 w-7 object-contain" />
-                                                    </div>
-                                                    <div>
-                                                        <p className="font-medium text-white">VNPay QR / Thẻ ngân hàng</p>
-                                                        <p className="text-sm text-gray-400">Thanh toán qua quét mã VNPay hoặc thẻ ATM/Visa</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div
-                                                className={`
-                                                    flex items-center p-3 rounded-lg cursor-pointer border transition
-                                                    ${paymentMethod === 'direct' ? 'border-red-500 bg-[#29261e]' : 'border-gray-700 bg-[#262626] hover:border-gray-600'}
+                                                    flex items-center p-3 rounded-xl cursor-pointer border transition
+                                                    ${paymentMethod === 'direct' ? 'border-amber-500 bg-[#29261e]' : 'border-gray-700 bg-[#262626] hover:border-gray-600'}
                                                 `}
                                                 onClick={() => setPaymentMethod('direct')}
                                             >
                                                 <Radio value="direct" className="radio-primary" />
                                                 <div className="ml-4 flex items-center">
-                                                    <div className="h-10 w-10 flex items-center justify-center mr-3 rounded bg-emerald-600 text-white text-xl">
+                                                    <div className="h-10 w-10 flex items-center justify-center mr-3 rounded-lg bg-emerald-600 text-white text-xl">
                                                         <CreditCardOutlined />
                                                     </div>
                                                     <div>
-                                                        <p className="font-medium text-white">Thanh toán trực tiếp / Test đặt vé nhanh</p>
-                                                        <p className="text-sm text-gray-400">Xác nhận vé thành công ngay lập tức để nhận vé tại rạp</p>
+                                                        <p className="font-medium text-white">Thanh toán trực tiếp tại rạp</p>
+                                                        <p className="text-sm text-gray-400">Giữ chỗ và thanh toán tại quầy vé CGV trước giờ chiếu</p>
                                                     </div>
                                                 </div>
                                             </div>
@@ -1191,17 +1385,179 @@ function BookMovie() {
 
                     <p>
                         <strong>Phương thức thanh toán:</strong>{' '}
-                        {paymentMethod === 'momo'
+                        {paymentMethod === 'vietqr'
+                            ? 'Chuyển khoản VietQR (Vietcombank)'
+                            : paymentMethod === 'momo'
                             ? 'Ví MoMo'
-                            : paymentMethod === 'vnpay'
-                            ? 'VNPay QR'
-                            : 'Thanh toán trực tiếp'}
+                            : 'Thanh toán trực tiếp tại rạp'}
                     </p>
 
                     <Divider className="my-2" />
                     <div className="flex justify-between items-center text-base">
                         <span className="font-bold">Tổng thanh toán:</span>
                         <span className="font-bold text-xl text-red-600">{formattedPrice(totalAmount)}</span>
+                    </div>
+                </div>
+            </Modal>
+
+            {/* Modal Thanh Toán VietQR Chuyển Tiền Thật (Vietcombank STK: 1336991507) */}
+            <Modal
+                title={
+                    <div className="flex items-center justify-between pr-6">
+                        <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-lg bg-[#008848] text-white flex items-center justify-center font-bold text-xs shadow">
+                                VCB
+                            </div>
+                            <div>
+                                <h3 className="text-base font-bold text-gray-900 m-0">
+                                    Thanh Toán Chuyển Khoản VietQR (Vietcombank)
+                                </h3>
+                                <p className="text-xs text-gray-500 m-0">Quét bằng mọi App Ngân hàng & Ví điện tử</p>
+                            </div>
+                        </div>
+                        <Tag color="green" className="font-semibold text-xs">
+                            Thanh toán thật 100%
+                        </Tag>
+                    </div>
+                }
+                open={isVietQrModalVisible}
+                onCancel={() => setIsVietQrModalVisible(false)}
+                footer={null}
+                width={560}
+                centered
+                destroyOnClose
+            >
+                <div className="py-2 space-y-4">
+                    {/* Countdown & Security Alert */}
+                    <div className="flex items-center justify-between p-2.5 bg-emerald-50 rounded-lg border border-emerald-200 text-xs">
+                        <div className="flex items-center gap-1.5 text-emerald-800">
+                            <SafetyCertificateFilled className="text-emerald-600 text-sm" />
+                            <span>Tài khoản chính thức CGV • Chuyển tiền 24/7 tức thì</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-red-600 font-semibold">
+                            <ClockCircleOutlined />
+                            <span>Thời gian còn: {formatCountdown(qrCountdown)}</span>
+                        </div>
+                    </div>
+
+                    {/* Dynamic VietQR Image Container */}
+                    <div className="flex flex-col items-center justify-center p-3 bg-gradient-to-b from-gray-50 to-gray-100 rounded-xl border border-gray-200">
+                        <div className="relative group">
+                            <img
+                                src={`https://img.vietqr.io/image/vietcombank-1336991507-compact2.png?amount=${totalAmount}&addInfo=VEPHIM%20${vietQrCode}&accountName=LAI%20VAN%20TU`}
+                                alt="Mã VietQR Vietcombank"
+                                className="w-64 sm:w-72 h-auto rounded-xl shadow-lg border-2 border-emerald-500 bg-white p-1"
+                            />
+                        </div>
+                        <p className="text-xs text-gray-500 mt-2 text-center">
+                            Mở <strong>App Ngân hàng bất kỳ (VCB, MB, Techcombank, BIDV...)</strong> hoặc <strong>Ví MoMo</strong> chọn <strong>Quét QR</strong> để chuyển tiền
+                        </p>
+                    </div>
+
+                    {/* Bank Transfer Details with 1-click Copy */}
+                    <div className="bg-gray-50 rounded-xl p-3.5 border border-gray-200 space-y-2 text-sm">
+                        <div className="flex justify-between items-center py-1 border-b border-gray-200">
+                            <span className="text-gray-500 text-xs">Ngân hàng thụ hưởng:</span>
+                            <span className="font-bold text-gray-800 text-xs sm:text-sm">Vietcombank (Ngoại Thương Việt Nam)</span>
+                        </div>
+
+                        <div className="flex justify-between items-center py-1 border-b border-gray-200">
+                            <span className="text-gray-500 text-xs">Số tài khoản (STK):</span>
+                            <div className="flex items-center gap-2">
+                                <span className="font-mono font-bold text-emerald-700 text-base">1336991507</span>
+                                <Button
+                                    size="small"
+                                    icon={<CopyOutlined />}
+                                    onClick={() => handleCopy('1336991507', 'Số tài khoản')}
+                                    className="text-xs h-6 px-2"
+                                >
+                                    Sao chép
+                                </Button>
+                            </div>
+                        </div>
+
+                        <div className="flex justify-between items-center py-1 border-b border-gray-200">
+                            <span className="text-gray-500 text-xs">Chủ tài khoản:</span>
+                            <div className="flex items-center gap-2">
+                                <span className="font-bold text-gray-800 text-xs sm:text-sm">LẠI VĂN TÚ</span>
+                                <Button
+                                    size="small"
+                                    icon={<CopyOutlined />}
+                                    onClick={() => handleCopy('LAI VAN TU', 'Tên chủ tài khoản')}
+                                    className="text-xs h-6 px-2"
+                                >
+                                    Sao chép
+                                </Button>
+                            </div>
+                        </div>
+
+                        <div className="flex justify-between items-center py-1 border-b border-gray-200">
+                            <span className="text-gray-500 text-xs">Số tiền thanh toán:</span>
+                            <div className="flex items-center gap-2">
+                                <span className="font-bold text-red-600 text-base">{totalAmount.toLocaleString('vi-VN')} đ</span>
+                                <Button
+                                    size="small"
+                                    icon={<CopyOutlined />}
+                                    onClick={() => handleCopy(totalAmount.toString(), 'Số tiền')}
+                                    className="text-xs h-6 px-2"
+                                >
+                                    Sao chép
+                                </Button>
+                            </div>
+                        </div>
+
+                        <div className="flex justify-between items-center py-1">
+                            <span className="text-gray-500 text-xs">Nội dung chuyển khoản:</span>
+                            <div className="flex items-center gap-2">
+                                <span className="font-mono font-bold text-blue-700 text-sm">VEPHIM {vietQrCode}</span>
+                                <Button
+                                    size="small"
+                                    icon={<CopyOutlined />}
+                                    onClick={() => handleCopy(`VEPHIM ${vietQrCode}`, 'Nội dung chuyển khoản')}
+                                    className="text-xs h-6 px-2"
+                                >
+                                    Sao chép
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="space-y-2 pt-1">
+                        <Button
+                            type="primary"
+                            size="large"
+                            block
+                            icon={<CheckCircleFilled />}
+                            loading={isSubmittingPayment}
+                            onClick={handlePaymentConfirm}
+                            className="h-12 bg-emerald-600 hover:bg-emerald-700 border-none font-bold text-base shadow-lg"
+                        >
+                            ✅ TÔI ĐÃ CHUYỂN TIỀN THÀNH CÔNG
+                        </Button>
+
+                        <div className="flex gap-2">
+                            <Button
+                                size="middle"
+                                className="flex-1"
+                                icon={<DownloadOutlined />}
+                                onClick={() => {
+                                    window.open(
+                                        `https://img.vietqr.io/image/vietcombank-1336991507-compact2.png?amount=${totalAmount}&addInfo=VEPHIM%20${vietQrCode}&accountName=LAI%20VAN%20TU`,
+                                        '_blank'
+                                    );
+                                }}
+                            >
+                                Mở ảnh QR gốc
+                            </Button>
+                            <Button
+                                size="middle"
+                                className="flex-1"
+                                onClick={() => setIsVietQrModalVisible(false)}
+                            >
+                                Hủy / Chọn lại
+                            </Button>
+                        </div>
                     </div>
                 </div>
             </Modal>

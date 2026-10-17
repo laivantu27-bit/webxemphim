@@ -1,13 +1,12 @@
 import Context from './Context';
 import CryptoJS from 'crypto-js';
-
 import cookies from 'js-cookie';
-
 import { useEffect, useState } from 'react';
 import { requestAuth } from '../config/request';
 
 export function Provider({ children }) {
     const [dataUser, setDataUser] = useState({});
+    const [isAuthLoading, setIsAuthLoading] = useState(!!cookies.get('logged'));
 
     const fetchAuth = async () => {
         try {
@@ -22,13 +21,15 @@ export function Provider({ children }) {
             setDataUser(user);
         } catch (error) {
             console.error('Auth error:', error);
+        } finally {
+            setIsAuthLoading(false);
         }
     };
 
     useEffect(() => {
         const token = cookies.get('logged');
-
         if (!token) {
+            setIsAuthLoading(false);
             return;
         }
         fetchAuth();
@@ -38,7 +39,9 @@ export function Provider({ children }) {
         <Context.Provider
             value={{
                 dataUser,
+                isAuthLoading,
                 fetchAuth,
+                setDataUser,
             }}
         >
             {children}

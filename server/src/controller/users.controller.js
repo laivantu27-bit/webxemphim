@@ -340,11 +340,17 @@ class UsersController {
 
     async updateRoleUser(req, res) {
         const { userId, role } = req.body;
+        // role: 'customer' | 'staff' | 'admin'
+        if (!['customer', 'staff', 'admin'].includes(role)) {
+            throw new BadRequestError('Vai trò không hợp lệ. Phải là: customer, staff, admin');
+        }
         const user = await modelUser.findOne({ where: { id: userId } });
         if (!user) {
             throw new BadRequestError('Người dùng không tồn tại');
         }
-        await user.update({ isAdmin: role });
+        // Cập nhật cả role (mới) và isAdmin (cũ - để tương thích ngược)
+        const isAdminValue = role === 'admin' ? '1' : '0';
+        await user.update({ role, isAdmin: isAdminValue });
         new OK({ message: 'Cập nhật vai trò người dùng thành công' }).send(res);
     }
 
@@ -518,6 +524,161 @@ class UsersController {
             console.error('Dashboard Error:', error);
             res.status(500).json({ message: 'Internal server error', error: error.message });
         }
+    }
+
+    /**
+     * Lấy thông tin điểm XP, cấp bậc thành viên và tiến độ của người dùng
+     */
+    async getUserXPInfo(req, res) {
+        const { id } = req.user;
+        const user = await modelUser.findByPk(id);
+        if (!user) throw new BadRequestError('Người dùng không tồn tại');
+
+        const { getXPProgress } = require('../utils/xpHelper');
+        const xpProgress = getXPProgress(user);
+
+        let history = [];
+        try {
+            if (user.rewardsHistory) {
+                history = typeof user.rewardsHistory === 'string' ? JSON.parse(user.rewardsHistory) : user.rewardsHistory;
+            }
+        } catch (e) {
+            history = [];
+        }
+
+        new OK({
+            message: 'Lấy thông tin thành viên thành công',
+            metadata: {
+                ...xpProgress,
+                fullName: user.fullName,
+                avatar: user.avatar,
+                rewardsHistory: history,
+            },
+        }).send(res);
+    }
+
+    /**
+     * Học sinh / sinh viên nộp ảnh thẻ và tên trường để nhận giảm giá
+     */
+    async submitStudentVerification(req, res) {
+        const { id } = req.user;
+        const { studentSchool, studentIdImage } = req.body;
+
+        if (!studentSchool || !studentIdImage) {
+            throw new BadRequestError('Vui lòng nhập tên trường và tải lên ảnh thẻ Học sinh / Sinh viên');
+        }
+
+        const user = await modelUser.findByPk(id);
+        if (!user) throw new BadRequestError('Người dùng không tồn tại');
+
+        user.studentSchool = studentSchool.trim();
+        user.studentIdImage = studentIdImage;
+        user.studentVerified = true; // Tự động duyệt hoặc kích hoạt ngay để trải nghiệm tốt nhất
+
+        await user.save();
+
+        // Tặng ngay 50 XP thưởng đăng ký thẻ HS/SV thành công
+        const { updateUserXPAndLevel } = require('../utils/xpHelper');
+        await updateUserXPAndLevel(id, 50, 'Xác minh thẻ Học sinh / Sinh viên (+50 XP)');
+
+        new OK({
+            message: 'Xác minh thẻ Học sinh / Sinh viên thành công! Bạn được giảm giá vé và nhận +50 XP 🎉',
+            metadata: {
+                studentVerified: true,
+                studentSchool: user.studentSchool,
+                studentIdImage: user.studentIdImage,
+            },
+        }).send(res);
+    }
+
+    /**
+     * Admin duyệt xác minh thẻ học sinh / sinh viên
+     */
+    async adminApproveStudent(req, res) {
+        const { userId, approved } = req.body;
+        const user = await modelUser.findByPk(userId);
+        if (!user) throw new BadRequestError('Người dùng không tồn tại');
+
+        user.studentVerified = !!approved;
+        await user.save();
+
+        new OK({
+            message: approved ? 'Đã duyệt thẻ HS/SV thành công' : 'Đã từ chối xác minh thẻ HS/SV',
+            metadata: user,
+        }).send(res);
+    }
+
+    /**
+     * Khách hàng dùng điểm XP để đổi ưu đãi: Giảm giá vé, Gói bim bim hoặc Cốc nước ngọt free
+     */
+    async redeemReward(req, res) {
+        const { id } = req.user;
+        const { rewardType } = req.body; // 'voucher_20k', 'free_drink', 'free_snack', 'voucher_50k'
+
+        const user = await modelUser.findByPk(id);
+        if (!user) throw new BadRequestError('Người dùng không tồn tại');
+
+        const REWARDS = {
+            free_drink: {
+                name: '1 Cốc Nước Ngọt Miễn Phí (Coca/Pepsi)',
+                cost: 200,
+                type: 'snack',
+            },
+            free_snack: {
+                name: '1 Gói Bim Bim / Snack Bỏng Ngô Miễn Phí',
+                cost: 300,
+                type: 'snack',
+            },
+            voucher_20k: {
+                name: 'Mã giảm giá 20.000 VNĐ cho lần mua vé sau',
+                cost: 500,
+                type: 'voucher',
+                discount: 20000,
+            },
+            voucher_50k: {
+                name: 'Mã giảm giá 50.000 VNĐ cho lần mua vé sau',
+                cost: 1000,
+                type: 'voucher',
+                discount: 50000,
+            },
+        };
+
+        const reward = REWARDS[rewardType];
+        if (!reward) throw new BadRequestError('Ưu đãi không hợp lệ');
+
+        if (Number(user.xpPoints || 0) < reward.cost) {
+            throw new BadRequestError(`Bạn cần tối thiểu ${reward.cost} điểm XP để đổi ưu đãi này (Hiện có: ${user.xpPoints || 0} XP)`);
+        }
+
+        const Voucher = require('../models/voucher.model');
+        const voucherCode = `XP${rewardType.toUpperCase()}_${Math.floor(1000 + Math.random() * 9000)}`;
+
+        if (reward.type === 'voucher') {
+            await Voucher.create({
+                code: voucherCode,
+                description: `Mã đổi thưởng từ điểm XP: ${reward.name}`,
+                discountType: 'fixed',
+                discountValue: reward.discount,
+                minOrderValue: 0,
+                quantity: 1,
+                usedCount: 0,
+                status: 'active',
+            });
+        }
+
+        // Trừ điểm XP
+        const { updateUserXPAndLevel } = require('../utils/xpHelper');
+        await updateUserXPAndLevel(id, -reward.cost, `Đổi ưu đãi: ${reward.name} (-${reward.cost} XP)`);
+
+        new OK({
+            message: `Chúc mừng bạn đã đổi thành công "${reward.name}"!`,
+            metadata: {
+                rewardName: reward.name,
+                cost: reward.cost,
+                code: voucherCode,
+                remainingXP: (user.xpPoints || 0) - reward.cost,
+            },
+        }).send(res);
     }
 }
 

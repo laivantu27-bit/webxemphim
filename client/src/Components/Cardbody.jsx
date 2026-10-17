@@ -1,4 +1,4 @@
-function Cardbody({ item }) {
+function Cardbody({ item, onWatchTrailer }) {
     return (
         <div className="group relative overflow-hidden rounded-lg transition-transform duration-300 ">
             {/* Image container with overlay */}
@@ -17,15 +17,42 @@ function Cardbody({ item }) {
                 {/* Gradient overlay */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 
+                {/* Quick Trailer Button on Center Hover */}
+                {onWatchTrailer && item.trailer_url && (
+                    <div 
+                        onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onWatchTrailer(item);
+                        }}
+                        className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10"
+                    >
+                        <div className="w-12 h-12 rounded-full bg-red-600/90 hover:bg-red-600 flex items-center justify-center text-white shadow-xl shadow-red-600/50 hover:scale-110 transition-transform cursor-pointer">
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="h-6 w-6 ml-0.5"
+                                viewBox="0 0 20 20"
+                                fill="currentColor"
+                            >
+                                <path
+                                    fillRule="evenodd"
+                                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
+                                    clipRule="evenodd"
+                                />
+                            </svg>
+                        </div>
+                    </div>
+                )}
+
                 {/* Quality badge */}
-                <div className="absolute top-2 right-2">
+                <div className="absolute top-2 right-2 z-10">
                     <span className="bg-red-600 text-white text-xs font-medium py-0.5 px-1.5 rounded">
                         {item.quality || 'HD'}
                     </span>
                 </div>
 
                 {/* Hover info */}
-                <div className="absolute bottom-0 left-0 right-0 p-3 transform translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+                <div className="absolute bottom-0 left-0 right-0 p-3 transform translate-y-full group-hover:translate-y-0 transition-transform duration-300 z-10">
                     <div className="flex justify-between items-center">
                         <span className="text-white text-xs font-medium">{item.time || '90'} phút</span>
                         <span className="bg-yellow-500/90 text-black text-xs font-bold py-0.5 px-1.5 rounded">

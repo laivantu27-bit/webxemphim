@@ -29,8 +29,33 @@ const authAdmin = async (req, res, next) => {
         const decoded = await verifyToken(token);
         const { id } = decoded;
         const findUser = await modelUser.findOne({ where: { id } });
-        if (findUser.isAdmin === '0') {
-            throw new ForbiddenError('Bạn không có quyền truy cập');
+        // Hỗ trợ cả isAdmin (cũ) và role (mới)
+        const isAdmin = findUser.isAdmin !== '0' || findUser.role === 'admin';
+        if (!isAdmin) {
+            throw new ForbiddenError('Bạn không có quyền truy cập - Chỉ Admin');
+        }
+        req.user = decoded;
+        next();
+    } catch (error) {
+        next(error);
+    }
+};
+
+const authStaff = async (req, res, next) => {
+    try {
+        const user = req.cookies.token;
+        if (!user) throw new ForbiddenError('Vui lòng đăng nhập');
+        const token = user;
+        const decoded = await verifyToken(token);
+        const { id } = decoded;
+        const findUser = await modelUser.findOne({ where: { id } });
+        // Admin cũng có thể vào khu nhân viên
+        const hasAccess =
+            findUser.role === 'staff' ||
+            findUser.role === 'admin' ||
+            findUser.isAdmin !== '0';
+        if (!hasAccess) {
+            throw new ForbiddenError('Bạn không có quyền truy cập - Chỉ Nhân viên hoặc Admin');
         }
         req.user = decoded;
         next();
@@ -43,4 +68,6 @@ module.exports = {
     asyncHandler,
     authUser,
     authAdmin,
+    authStaff,
 };
+

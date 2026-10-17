@@ -157,6 +157,8 @@ class StaffController {
             paymentMethod = 'cash',
             customerName = 'Khách tại quầy',
             customerPhone = '',
+            branchId = null,
+            branchName = 'CGV Cinema',
         } = req.body;
 
         if (!movieId || !date || !time || !seatCodes || !seatCodes.length) {
@@ -210,8 +212,9 @@ class StaffController {
             }
         }
 
-        // Tính tiền vé
-        const ticketTotal = parseInt(movie.price || 0, 10) * seatCodes.length;
+        // Tính tiền vé theo từng hàng ghế (ngồi đầu giá cao hơn ngồi sau)
+        const { calculateSeatsTotal } = require('../utils/seatPricing');
+        const ticketTotal = calculateSeatsTotal(movie.price || 0, seatCodes);
 
         // Tính tiền bắp nước nếu có
         let serviceTotal = 0;
@@ -224,8 +227,10 @@ class StaffController {
         // Tạo bản ghi thanh toán với trạng thái thành công ngay tại quầy
         const payment = await Payments.create({
             movieId,
-            userId: req.user?.id || null,
+            userId: null,
             staffId: req.user?.id || null,
+            cinemaBranchId: branchId || null,
+            branchName: branchName || 'CGV Cinema',
             seatId: seatCodes.join(', '),
             totalPrice,
             time,
@@ -237,6 +242,25 @@ class StaffController {
             customerPhone,
             services: services.length > 0 ? JSON.stringify(services) : null,
         });
+
+        // Nếu khách hàng đã đăng ký tài khoản (qua SĐT), cộng điểm thưởng XP cho khách!
+        if (customerPhone) {
+            try {
+                const { updateUserXPAndLevel } = require('../utils/xpHelper');
+                const matchedUser = await User.findOne({ where: { phone: customerPhone.trim() } });
+                if (matchedUser) {
+                    await updateUserXPAndLevel(
+                        matchedUser.id,
+                        seatCodes.length * 100,
+                        `Mua ${seatCodes.length} vé tại quầy ${branchName} (+${seatCodes.length * 100} XP)`
+                    );
+                    payment.userId = matchedUser.id;
+                    await payment.save();
+                }
+            } catch (xpErr) {
+                console.error('POS XP award notice:', xpErr);
+            }
+        }
 
         new Created({
             message: 'Bán vé tại quầy thành công!',
@@ -259,12 +283,98 @@ class StaffController {
      * 4. QUẢN LÝ PHÒNG VÀ GHẾ BẢO TRÌ
      */
     async getRooms(req, res) {
-        const rooms = await Room.findAll({
+        let rooms = await Room.findAll({
             order: [['createdAt', 'ASC']],
         });
+
+        if (rooms.length === 0) {
+            try {
+                const CinemaBranch = require('../models/cinemaBranch.model');
+                const branches = await CinemaBranch.findAll();
+                if (branches && branches.length > 0) {
+                    const sampleRooms = [
+                        {
+                            name: 'Phòng 01 (Cinema 1)',
+                            cinema: branches[0]?.name || 'CGV Vincom Center Đồng Khởi',
+                            cinemaBranchId: branches[0]?.id || null,
+                            totalRows: 8,
+                            seatsPerRow: 12,
+                            type: '2D',
+                            status: 'active',
+                        },
+                        {
+                            name: 'Phòng 02 (IMAX Laser)',
+                            cinema: branches[1]?.name || 'CGV Landmark 81',
+                            cinemaBranchId: branches[1]?.id || null,
+                            totalRows: 8,
+                            seatsPerRow: 12,
+                            type: 'IMAX',
+                            status: 'active',
+                        },
+                        {
+                            name: 'Phòng 03 (Gold Class VIP)',
+                            cinema: branches[2]?.name || 'CGV Vincom Center Bà Triệu',
+                            cinemaBranchId: branches[2]?.id || null,
+                            totalRows: 8,
+                            seatsPerRow: 12,
+                            type: '2D',
+                            status: 'active',
+                        },
+                        {
+                            name: 'Phòng 04 (4DX Motion)',
+                            cinema: branches[3]?.name || 'CGV Crescent Mall',
+                            cinemaBranchId: branches[3]?.id || null,
+                            totalRows: 8,
+                            seatsPerRow: 12,
+                            type: '4DX',
+                            status: 'active',
+                        },
+                        {
+                            name: 'Phòng 05 (Starium 3D)',
+                            cinema: branches[4]?.name || 'CGV SC VivoCity',
+                            cinemaBranchId: branches[4]?.id || null,
+                            totalRows: 8,
+                            seatsPerRow: 12,
+                            type: '3D',
+                            status: 'active',
+                        },
+                    ];
+                    await Room.bulkCreate(sampleRooms);
+                    rooms = await Room.findAll({ order: [['createdAt', 'ASC']] });
+                }
+            } catch (err) {
+                console.error('Lỗi khi seed phòng mẫu:', err);
+            }
+        }
+
         new OK({
             message: 'Lấy danh sách phòng thành công',
             metadata: rooms,
+        }).send(res);
+    }
+
+    async updateRoomBranch(req, res) {
+        const { id, cinema, cinemaBranchId, name, type, status } = req.body;
+        if (!id) {
+            throw new BadRequestError('Vui lòng cung cấp id phòng chiếu');
+        }
+
+        const room = await Room.findOne({ where: { id } });
+        if (!room) {
+            throw new BadRequestError('Không tìm thấy phòng chiếu');
+        }
+
+        await room.update({
+            cinema: cinema || room.cinema,
+            cinemaBranchId: cinemaBranchId !== undefined ? cinemaBranchId : room.cinemaBranchId,
+            name: name || room.name,
+            type: type || room.type,
+            status: status !== undefined ? status : room.status,
+        });
+
+        new OK({
+            message: `Cập nhật thông tin phòng chiếu "${room.name}" thành công!`,
+            metadata: room,
         }).send(res);
     }
 

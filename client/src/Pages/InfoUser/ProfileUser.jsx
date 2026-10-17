@@ -1,74 +1,56 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Header from '../../Components/Header';
 import Footer from '../../Components/Footer';
-import { requestLogout } from '../../config/request';
+import { requestLogout, requestGetUserXPInfo, requestGetPaymentByUserId, requestAuth } from '../../config/request';
 import { message } from 'antd';
 
 // Import components
 import UserSidebar from './Components/UserSidebar';
 import ProfileForm from './Components/ProfileForm';
 import BookingHistory from './Components/BookingHistory';
+import UserLoyaltyCard from './Components/UserLoyaltyCard';
+import StudentVerificationForm from './Components/StudentVerificationForm';
 import { ToastContainer } from 'react-toastify';
 import AvatarUploadModal from './Components/AvatarUploadModal';
 
 function ProfileUser() {
     const [selectedMenu, setSelectedMenu] = useState('profile');
     const [isAvatarModalVisible, setIsAvatarModalVisible] = useState(false);
+    const [userData, setUserData] = useState(null);
+    const [xpInfo, setXpInfo] = useState(null);
+    const [userPayments, setUserPayments] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-    // Mock user data based on user model
-    const mockUser = {
-        id: '550e8400-e29b-41d4-a716-446655440000',
-        avatar: null,
-        fullName: 'Nguyễn Văn A',
-        phone: '0987654321',
-        email: 'nguyenvana@example.com',
-        isAdmin: '0',
-        typeLogin: 'email',
-        createdAt: '2023-12-01',
+    const fetchUserData = async () => {
+        try {
+            setLoading(true);
+            const [resAuth, resXP, resPayments] = await Promise.allSettled([
+                requestAuth(),
+                requestGetUserXPInfo(),
+                requestGetPaymentByUserId(),
+            ]);
+
+            if (resAuth.status === 'fulfilled' && resAuth.value?.metadata) {
+                setUserData(resAuth.value.metadata);
+            }
+
+            if (resXP.status === 'fulfilled' && resXP.value?.metadata) {
+                setXpInfo(resXP.value.metadata);
+            }
+
+            if (resPayments.status === 'fulfilled' && resPayments.value?.metadata) {
+                setUserPayments(resPayments.value.metadata);
+            }
+        } catch (err) {
+            console.error('Profile fetch error:', err);
+        } finally {
+            setLoading(false);
+        }
     };
 
-    // Mock payment history data based on payment model
-    const mockPayments = [
-        {
-            id: '550e8400-e29b-41d4-a716-446655440001',
-            movieId: 'movie-001',
-            movieName: 'Avengers: Endgame',
-            userId: mockUser.id,
-            seatId: 'A1, A2',
-            totalPrice: 200000,
-            time: '20:00',
-            date: '2024-06-10',
-            paymentMethod: 'momo',
-            status: 'success',
-            posterUrl: 'https://lumiere-a.akamaihd.net/v1/images/p_avengersendgame_19751_e14a0104.jpeg',
-        },
-        {
-            id: '550e8400-e29b-41d4-a716-446655440002',
-            movieId: 'movie-002',
-            movieName: 'Inception',
-            userId: mockUser.id,
-            seatId: 'B5, B6',
-            totalPrice: 180000,
-            time: '18:30',
-            date: '2024-06-15',
-            paymentMethod: 'vnpay',
-            status: 'success',
-            posterUrl: 'https://m.media-amazon.com/images/M/MV5BMjAxMzY3NjcxNF5BMl5BanBnXkFtZTcwNTI5OTM0Mw@@._V1_.jpg',
-        },
-        {
-            id: '550e8400-e29b-41d4-a716-446655440003',
-            movieId: 'movie-003',
-            movieName: 'The Dark Knight',
-            userId: mockUser.id,
-            seatId: 'C8',
-            totalPrice: 90000,
-            time: '15:00',
-            date: '2024-06-20',
-            paymentMethod: 'momo',
-            status: 'pending',
-            posterUrl: 'https://m.media-amazon.com/images/M/MV5BMTMxNTMwODM0NF5BMl5BanBnXkFtZTcwODAyMTk2Mw@@._V1_.jpg',
-        },
-    ];
+    useEffect(() => {
+        fetchUserData();
+    }, []);
 
     const handleMenuSelect = (e) => {
         setSelectedMenu(e.key);
@@ -80,7 +62,7 @@ function ProfileUser() {
             message.success('Đăng xuất thành công!');
             setTimeout(() => {
                 window.location.href = '/';
-            }, 1000);
+            }, 800);
         } catch (error) {
             console.log(error);
             message.error('Đã xảy ra lỗi khi đăng xuất!');
@@ -89,21 +71,21 @@ function ProfileUser() {
 
     const handleAvatarUpload = () => {
         setIsAvatarModalVisible(false);
+        fetchUserData();
     };
 
     return (
-        <div className="bg-[#161616] min-h-screen text-white bg-[url('/path/to/pattern.png')] bg-fixed bg-opacity-10 pt-20">
+        <div className="bg-[#161616] min-h-screen text-white pt-20">
             <ToastContainer />
-            <header>
-                <Header />
-            </header>
+            <Header />
 
             <main className="container mx-auto px-4 py-12">
                 <div className="flex flex-col md:flex-row gap-6">
                     {/* Sidebar */}
                     <div className="w-full md:w-1/4">
                         <UserSidebar
-                            user={mockUser}
+                            user={userData}
+                            xpInfo={xpInfo}
                             selectedMenu={selectedMenu}
                             handleMenuSelect={handleMenuSelect}
                             handleLogout={handleLogout}
@@ -114,12 +96,29 @@ function ProfileUser() {
                     <div className="w-full md:w-3/4">
                         {selectedMenu === 'profile' && (
                             <ProfileForm
-                                user={mockUser}
+                                user={userData}
                                 isAvatarModalVisible={isAvatarModalVisible}
                                 setIsAvatarModalVisible={setIsAvatarModalVisible}
                             />
                         )}
-                        {selectedMenu === 'history' && <BookingHistory bookings={mockPayments} />}
+
+                        {selectedMenu === 'loyalty' && (
+                            <UserLoyaltyCard
+                                xpInfo={xpInfo}
+                                onRefresh={fetchUserData}
+                            />
+                        )}
+
+                        {selectedMenu === 'student' && (
+                            <StudentVerificationForm
+                                xpInfo={xpInfo}
+                                onRefresh={fetchUserData}
+                            />
+                        )}
+
+                        {selectedMenu === 'history' && (
+                            <BookingHistory bookings={userPayments} />
+                        )}
                     </div>
                 </div>
             </main>

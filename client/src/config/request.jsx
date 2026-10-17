@@ -161,6 +161,11 @@ export const requestAddServicesToPayment = async (data) => {
     return res.data;
 };
 
+export const requestGetBankConfig = async () => {
+    const res = await apiClient.get(`${apiPayments}/bank-config`);
+    return res.data;
+};
+
 /// category
 const apiCategory = '/api/category';
 
@@ -311,6 +316,11 @@ export const requestStaffGetRooms = async () => {
     return res.data;
 };
 
+export const requestStaffUpdateRoomBranch = async (data) => {
+    const res = await apiClient.post(`${apiStaff}/room-branch`, data);
+    return res.data;
+};
+
 export const requestStaffGetSeats = async (params) => {
     const res = await apiClient.get(`${apiStaff}/seats`, { params });
     return res.data;
@@ -370,4 +380,70 @@ export const requestDeleteVoucher = async (id) => {
     });
     return res.data;
 };
+
+//// cinema branches (chi nhánh rạp)
+const apiCinemaBranch = '/api/cinema-branch';
+
+export const requestGetAllBranches = async (params) => {
+    const res = await request.get(`${apiCinemaBranch}/all`, { params });
+    return res.data;
+};
+
+export const requestGetBranchById = async (id) => {
+    const res = await request.get(`${apiCinemaBranch}/detail`, { params: { id } });
+    return res.data;
+};
+
+export const requestSeedBranches = async () => {
+    const res = await request.post(`${apiCinemaBranch}/seed`);
+    return res.data;
+};
+
+export const requestCreateBranch = async (data) => {
+    const res = await apiClient.post(`${apiCinemaBranch}/create`, data);
+    return res.data;
+};
+
+export const requestUpdateBranch = async (data) => {
+    const res = await apiClient.post(`${apiCinemaBranch}/update`, data);
+    return res.data;
+};
+
+export const requestDeleteBranch = async (id) => {
+    const res = await apiClient.delete(`${apiCinemaBranch}/delete`, { data: { id } });
+    return res.data;
+};
+
+//// loyalty XP & student verification
+export const requestGetUserXPInfo = async () => {
+    const res = await apiClient.get(`${apiUser}/xp-info`);
+    return res.data;
+};
+
+export const requestSubmitStudentVerification = async (data) => {
+    const res = await apiClient.post(`${apiUser}/student-verify`, data);
+    return res.data;
+};
+
+export const requestAdminApproveStudent = async (data) => {
+    const res = await apiClient.post(`${apiUser}/approve-student`, data);
+    return res.data;
+};
+
+export const requestRedeemReward = async (data) => {
+    const res = await apiClient.post(`${apiUser}/redeem-reward`, data);
+    return res.data;
+};
+
+//// review & rating
+export const requestGetPendingReviewMovies = async () => {
+    const res = await apiClient.get(`${apiPreviewMovie}/pending`);
+    return res.data;
+};
+
+export const requestGetReviewsByMovieId = async (movieId) => {
+    const res = await request.get(`${apiPreviewMovie}/by-movie`, { params: { movieId } });
+    return res.data;
+};
+
 

@@ -1,11 +1,35 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Row, Col, Select, DatePicker, Button, Tag, message, Spin, Space, Statistic, Alert } from 'antd';
+import {
+    Card,
+    Row,
+    Col,
+    Select,
+    DatePicker,
+    Button,
+    Tag,
+    message,
+    Spin,
+    Space,
+    Statistic,
+    Alert,
+    Modal,
+    Form,
+    Input,
+    Table,
+    Divider,
+} from 'antd';
 import {
     ToolOutlined,
     CheckCircleOutlined,
     AppstoreOutlined,
     WarningOutlined,
     ReloadOutlined,
+    ShopOutlined,
+    EditOutlined,
+    EnvironmentOutlined,
+    InfoCircleOutlined,
+    EyeOutlined,
+    CheckOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import {
@@ -13,6 +37,8 @@ import {
     requestGetAllMovie,
     requestStaffGetSeats,
     requestStaffUpdateSeatMaintenance,
+    requestStaffUpdateRoomBranch,
+    requestGetAllBranches,
 } from '../../../../config/request';
 import styles from './SeatMaintenance.module.scss';
 
@@ -23,6 +49,7 @@ const SEATS_PER_ROW = 12;
 const SeatMaintenance = () => {
     const [rooms, setRooms] = useState([]);
     const [movies, setMovies] = useState([]);
+    const [branches, setBranches] = useState([]);
     const [selectedRoom, setSelectedRoom] = useState(null);
     const [selectedMovie, setSelectedMovie] = useState(null);
     const [selectedDate, setSelectedDate] = useState(dayjs().format('YYYY-MM-DD'));
@@ -31,6 +58,15 @@ const SeatMaintenance = () => {
     const [selectedSeatCodes, setSelectedSeatCodes] = useState([]);
     const [loading, setLoading] = useState(false);
     const [updating, setUpdating] = useState(false);
+
+    // Modal state for editing room branch
+    const [isBranchModalOpen, setIsBranchModalOpen] = useState(false);
+    const [isRoomListModalOpen, setIsRoomListModalOpen] = useState(false);
+    const [editingRoom, setEditingRoom] = useState(null);
+    const [targetBranchId, setTargetBranchId] = useState(null);
+    const [roomNameInput, setRoomNameInput] = useState('');
+    const [roomTypeInput, setRoomTypeInput] = useState('2D');
+    const [savingBranch, setSavingBranch] = useState(false);
 
     useEffect(() => {
         fetchInitialData();
@@ -43,22 +79,38 @@ const SeatMaintenance = () => {
     }, [selectedMovie, selectedDate, selectedTime]);
 
     const fetchInitialData = async () => {
+        setLoading(true);
         try {
-            const [roomsRes, moviesRes] = await Promise.all([
+            const [roomsRes, moviesRes, branchRes] = await Promise.all([
                 requestStaffGetRooms(),
                 requestGetAllMovie(),
+                requestGetAllBranches().catch(() => ({ metadata: [] })),
             ]);
 
             const rList = roomsRes?.metadata || [];
             const mList = moviesRes?.metadata || moviesRes || [];
+            const bList = branchRes?.metadata || [];
 
             setRooms(rList);
-            if (rList.length > 0) setSelectedRoom(rList[0]);
+            setBranches(bList);
+
+            if (rList.length > 0) {
+                // If currently selected room still exists, keep it; otherwise select first
+                setSelectedRoom((prev) => {
+                    if (prev) {
+                        const found = rList.find((x) => x.id === prev.id);
+                        return found || rList[0];
+                    }
+                    return rList[0];
+                });
+            }
 
             setMovies(mList);
-            if (mList.length > 0) setSelectedMovie(mList[0]);
+            if (mList.length > 0 && !selectedMovie) setSelectedMovie(mList[0]);
         } catch (error) {
             message.error('Lỗi khi tải dữ liệu phòng & phim');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -115,6 +167,66 @@ const SeatMaintenance = () => {
         }
     };
 
+    // Open branch edit modal for a specific room
+    const handleOpenBranchModal = (roomToEdit) => {
+        const target = roomToEdit || selectedRoom;
+        if (!target) {
+            message.warning('Vui lòng chọn phòng chiếu trước');
+            return;
+        }
+        setEditingRoom(target);
+        setRoomNameInput(target.name || '');
+        setRoomTypeInput(target.type || '2D');
+
+        // Find corresponding branch by cinemaBranchId or cinema name
+        const matched = branches.find(
+            (b) => b.id === target.cinemaBranchId || b.name === target.cinema
+        );
+        setTargetBranchId(matched ? matched.id : null);
+        setIsBranchModalOpen(true);
+    };
+
+    // Save branch changes
+    const handleSaveBranch = async () => {
+        if (!editingRoom) return;
+
+        const branchObj = branches.find((b) => b.id === targetBranchId);
+        const cinemaName = branchObj ? branchObj.name : editingRoom.cinema;
+
+        setSavingBranch(true);
+        try {
+            const payload = {
+                id: editingRoom.id,
+                name: roomNameInput.trim() || editingRoom.name,
+                type: roomTypeInput,
+                cinema: cinemaName,
+                cinemaBranchId: branchObj ? branchObj.id : editingRoom.cinemaBranchId,
+            };
+
+            const res = await requestStaffUpdateRoomBranch(payload);
+            message.success(
+                res?.message ||
+                    `Đã cập nhật phòng "${payload.name}" thuộc chi nhánh "${cinemaName}" thành công!`
+            );
+
+            // Update rooms in state
+            const updatedRooms = rooms.map((r) =>
+                r.id === editingRoom.id ? { ...r, ...payload } : r
+            );
+            setRooms(updatedRooms);
+
+            if (selectedRoom?.id === editingRoom.id) {
+                setSelectedRoom({ ...selectedRoom, ...payload });
+            }
+
+            setIsBranchModalOpen(false);
+        } catch (error) {
+            message.error(error?.response?.data?.message || 'Lỗi khi cập nhật chi nhánh phòng');
+        } finally {
+            setSavingBranch(false);
+        }
+    };
+
     // Calculate stats
     const totalSeatsCount = SEAT_ROWS.length * SEATS_PER_ROW;
     const maintenanceCount = existingSeats.filter(
@@ -122,6 +234,85 @@ const SeatMaintenance = () => {
     ).length;
     const bookedCount = existingSeats.filter((s) => s.status === 'booked').length;
     const availableCount = totalSeatsCount - maintenanceCount - bookedCount;
+
+    const selectedBranchObj = branches.find((b) => b.id === targetBranchId);
+
+    // Columns for Room List Modal
+    const roomTableColumns = [
+        {
+            title: 'STT',
+            key: 'index',
+            width: 60,
+            align: 'center',
+            render: (_, __, i) => i + 1,
+        },
+        {
+            title: 'Tên phòng chiếu',
+            dataIndex: 'name',
+            key: 'name',
+            render: (text) => <strong>{text}</strong>,
+        },
+        {
+            title: 'Chi nhánh rạp trực thuộc',
+            dataIndex: 'cinema',
+            key: 'cinema',
+            render: (cinema) => (
+                <Tag color="magenta" style={{ fontWeight: 600, fontSize: '13px', padding: '4px 10px' }}>
+                    🏢 {cinema}
+                </Tag>
+            ),
+        },
+        {
+            title: 'Loại phòng',
+            dataIndex: 'type',
+            key: 'type',
+            align: 'center',
+            render: (t) => {
+                const colorMap = { '2D': 'blue', '3D': 'green', IMAX: 'gold', '4DX': 'magenta' };
+                return <Tag color={colorMap[t] || 'cyan'}>{t}</Tag>;
+            },
+        },
+        {
+            title: 'Sức chứa',
+            key: 'capacity',
+            align: 'center',
+            render: (_, r) => (
+                <Tag color="geekblue">{r.totalRows * r.seatsPerRow} ghế ({r.totalRows}x{r.seatsPerRow})</Tag>
+            ),
+        },
+        {
+            title: 'Thao tác',
+            key: 'action',
+            align: 'center',
+            render: (_, r) => (
+                <Space size="small">
+                    <Button
+                        type="primary"
+                        ghost
+                        size="small"
+                        icon={<EditOutlined />}
+                        onClick={() => {
+                            handleOpenBranchModal(r);
+                        }}
+                    >
+                        Sửa Chi Nhánh
+                    </Button>
+                    <Button
+                        size="small"
+                        type={selectedRoom?.id === r.id ? 'primary' : 'default'}
+                        icon={<CheckOutlined />}
+                        onClick={() => {
+                            setSelectedRoom(r);
+                            setIsRoomListModalOpen(false);
+                            message.info(`Đã chọn "${r.name} - ${r.cinema}"`);
+                        }}
+                    >
+                        {selectedRoom?.id === r.id ? 'Đang chọn' : 'Chọn phòng'}
+                    </Button>
+                </Space>
+            ),
+        },
+    ];
 
     return (
         <div className={styles.container}>
@@ -132,20 +323,64 @@ const SeatMaintenance = () => {
                             <ToolOutlined /> Quản Lý Phòng & Bảo Trì Ghế
                         </h2>
                         <p className={styles.subtitle}>
-                            Đánh dấu các ghế hỏng, ghế cần vệ sinh hoặc bảo trì để ngăn khách hàng đặt vé
+                            Phân bổ phòng cho chi nhánh CGV, sửa thông tin phòng và kiểm tra sơ đồ ghế bảo trì
                         </p>
                     </div>
 
-                    <Button icon={<ReloadOutlined />} onClick={fetchSeats} loading={loading}>
-                        Làm Mới
-                    </Button>
+                    <Space>
+                        <Button
+                            type="primary"
+                            icon={<ShopOutlined />}
+                            onClick={() => handleOpenBranchModal(selectedRoom)}
+                        >
+                            🏢 Sửa Chi Nhánh Phòng
+                        </Button>
+                        <Button
+                            icon={<AppstoreOutlined />}
+                            onClick={() => setIsRoomListModalOpen(true)}
+                        >
+                            📋 Tất Cả Phòng ({rooms.length})
+                        </Button>
+                        <Button icon={<ReloadOutlined />} onClick={fetchInitialData} loading={loading}>
+                            Làm Mới
+                        </Button>
+                    </Space>
                 </div>
+
+                {/* Selected Room Details Banner */}
+                {selectedRoom && (
+                    <div className={styles.roomInfoBanner}>
+                        <div className={styles.bannerLeft}>
+                            <span className={styles.roomTitle}>🎬 {selectedRoom.name}</span>
+                            <span className={styles.branchTag}>
+                                🏢 {selectedRoom.cinema}
+                            </span>
+                            <Tag color="gold" className={styles.typeTag}>
+                                {selectedRoom.type}
+                            </Tag>
+                            <span className={styles.capacityInfo}>
+                                Sức chứa: {selectedRoom.totalRows * selectedRoom.seatsPerRow} ghế ({selectedRoom.totalRows} hàng × {selectedRoom.seatsPerRow} ghế)
+                            </span>
+                        </div>
+                        <div className={styles.bannerRight}>
+                            <Button
+                                size="small"
+                                type="primary"
+                                ghost
+                                icon={<EditOutlined />}
+                                onClick={() => handleOpenBranchModal(selectedRoom)}
+                            >
+                                Đổi Chi Nhánh Rạp Này
+                            </Button>
+                        </div>
+                    </div>
+                )}
 
                 {/* Filter Controls */}
                 <div className={styles.filtersSection}>
                     <Row gutter={[16, 16]}>
                         <Col xs={24} md={6}>
-                            <label className={styles.filterLabel}>Phòng chiếu:</label>
+                            <label className={styles.filterLabel}>Phòng chiếu & Chi nhánh:</label>
                             <Select
                                 size="large"
                                 style={{ width: '100%' }}
@@ -244,7 +479,7 @@ const SeatMaintenance = () => {
                                             const status = found ? found.status : 'available';
                                             const isSelected = selectedSeatCodes.includes(code);
 
-                                            let cls = styles.available;
+                                             let cls = styles.available;
                                             if (status === 'maintenance' || status === 'broken') {
                                                 cls = styles.maintenance;
                                             } else if (status === 'booked') {
@@ -330,6 +565,149 @@ const SeatMaintenance = () => {
                     </Space>
                 </div>
             </Card>
+
+            {/* Modal Sửa Chi Nhánh Cho Phòng Chiếu */}
+            <Modal
+                title={
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#ff4d4f' }}>
+                        <ShopOutlined style={{ fontSize: '20px' }} />
+                        <span>Sửa Chi Nhánh & Thông Tin Phòng Chiếu</span>
+                    </div>
+                }
+                open={isBranchModalOpen}
+                onCancel={() => setIsBranchModalOpen(false)}
+                onOk={handleSaveBranch}
+                confirmLoading={savingBranch}
+                okText="Lưu Thay Đổi"
+                cancelText="Hủy"
+                width={580}
+            >
+                <div style={{ padding: '8px 0' }}>
+                    <Alert
+                        message="Chọn chi nhánh rạp CGV cho phòng chiếu"
+                        description="Phòng chiếu này sẽ được điều chuyển trực thuộc chi nhánh CGV bạn chọn dưới đây."
+                        type="info"
+                        showIcon
+                        style={{ marginBottom: '18px' }}
+                    />
+
+                    <div style={{ marginBottom: '16px' }}>
+                        <label style={{ display: 'block', fontWeight: 600, marginBottom: '6px' }}>
+                            Tên phòng chiếu:
+                        </label>
+                        <Input
+                            size="large"
+                            value={roomNameInput}
+                            onChange={(e) => setRoomNameInput(e.target.value)}
+                            placeholder="VD: Phòng 01 (Cinema 1), Phòng VIP..."
+                        />
+                    </div>
+
+                    <Row gutter={16} style={{ marginBottom: '16px' }}>
+                        <Col span={12}>
+                            <label style={{ display: 'block', fontWeight: 600, marginBottom: '6px' }}>
+                                Loại phòng:
+                            </label>
+                            <Select
+                                size="large"
+                                style={{ width: '100%' }}
+                                value={roomTypeInput}
+                                onChange={(val) => setRoomTypeInput(val)}
+                                options={[
+                                    { value: '2D', label: '2D Digital' },
+                                    { value: '3D', label: '3D Digital' },
+                                    { value: 'IMAX', label: 'IMAX Laser' },
+                                    { value: '4DX', label: '4DX Dynamic' },
+                                ]}
+                            />
+                        </Col>
+                        <Col span={12}>
+                            <label style={{ display: 'block', fontWeight: 600, marginBottom: '6px' }}>
+                                Chi nhánh hiện tại:
+                            </label>
+                            <Tag color="volcano" style={{ padding: '6px 10px', fontSize: '13px', width: '100%', textAlign: 'center' }}>
+                                {editingRoom?.cinema || 'Chưa gán'}
+                            </Tag>
+                        </Col>
+                    </Row>
+
+                    <div style={{ marginBottom: '16px' }}>
+                        <label style={{ display: 'block', fontWeight: 600, marginBottom: '6px' }}>
+                            🏢 Chọn Chi Nhánh Rạp CGV Mới:
+                        </label>
+                        <Select
+                            size="large"
+                            showSearch
+                            style={{ width: '100%' }}
+                            placeholder="-- Tìm & chọn chi nhánh CGV --"
+                            optionFilterProp="filterText"
+                            value={targetBranchId}
+                            onChange={(val) => setTargetBranchId(val)}
+                            options={branches.map((b) => ({
+                                value: b.id,
+                                filterText: `${b.name} ${b.province} ${b.city} ${b.address}`,
+                                label: (
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <span>🏢 <strong>{b.name}</strong></span>
+                                        <Tag color="cyan">{b.province || b.city}</Tag>
+                                    </div>
+                                ),
+                            }))}
+                        />
+                    </div>
+
+                    {selectedBranchObj && (
+                        <div className={styles.branchPreviewCard}>
+                            <div className={styles.branchTitle}>
+                                📍 {selectedBranchObj.name} ({selectedBranchObj.brand})
+                            </div>
+                            <div className={styles.branchAddress}>
+                                <EnvironmentOutlined style={{ marginRight: 6, color: '#ff4d4f' }} />
+                                {selectedBranchObj.address}
+                            </div>
+                            <div className={styles.branchMeta}>
+                                <span>📞 {selectedBranchObj.phone || '1900 6017'}</span>
+                                <span>⏰ {selectedBranchObj.openHours || '08:00 - 24:00'}</span>
+                                <span>🏛️ {selectedBranchObj.province}</span>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </Modal>
+
+            {/* Modal Danh Sách & Quản Lý Chi Nhánh Phòng */}
+            <Modal
+                title={
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <AppstoreOutlined style={{ color: '#1890ff', fontSize: '20px' }} />
+                        <span>Danh Sách Phòng Chiếu & Chi Nhánh Rạp CGV</span>
+                    </div>
+                }
+                open={isRoomListModalOpen}
+                onCancel={() => setIsRoomListModalOpen(false)}
+                footer={[
+                    <Button key="close" onClick={() => setIsRoomListModalOpen(false)}>
+                        Đóng
+                    </Button>,
+                ]}
+                width={850}
+            >
+                <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: '#888' }}>
+                        Tổng cộng: <strong>{rooms.length}</strong> phòng chiếu trong hệ thống
+                    </span>
+                    <Button icon={<ReloadOutlined />} size="small" onClick={fetchInitialData}>
+                        Làm Mới
+                    </Button>
+                </div>
+                <Table
+                    columns={roomTableColumns}
+                    dataSource={rooms}
+                    rowKey="id"
+                    pagination={{ pageSize: 5 }}
+                    size="middle"
+                />
+            </Modal>
         </div>
     );
 };

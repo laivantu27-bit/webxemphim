@@ -9,6 +9,7 @@ import Category from '../Pages/Category';
 import Admin from '../Pages/Admin/Index';
 import ForgotPassword from '../Pages/ForgotPassword';
 import Staff from '../Pages/Staff/Staff';
+import ProtectedRoute from '../Components/ProtectedRoute/ProtectedRoute';
 
 export const routes = [
     {
@@ -48,15 +49,25 @@ export const routes = [
         component: <Category />,
     },
     {
+        // Chỉ Admin mới vào được
         path: '/admin',
-        component: <Admin />,
+        component: (
+            <ProtectedRoute allowedRoles={['admin']} redirectTo="/">
+                <Admin />
+            </ProtectedRoute>
+        ),
     },
     {
         path: '/forgot-password',
         component: <ForgotPassword />,
     },
     {
+        // Nhân viên và Admin mới vào được
         path: '/staff',
-        component: <Staff />,
+        component: (
+            <ProtectedRoute allowedRoles={['staff', 'admin']} redirectTo="/">
+                <Staff />
+            </ProtectedRoute>
+        ),
     },
 ];

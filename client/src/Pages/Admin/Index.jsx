@@ -13,6 +13,7 @@ import {
     CoffeeOutlined,
     QrcodeOutlined,
     TagOutlined,
+    EnvironmentOutlined,
 } from '@ant-design/icons';
 import { useEffect, useState } from 'react';
 
@@ -28,6 +29,7 @@ import ManagerContact from './Components/ManagerContact/ManagerContact';
 import ManagerRoom from './Components/ManagerRoom/ManagerRoom';
 import ManagerServices from './Components/ManagerServices/ManagerServices';
 import ManagerVouchers from './Components/ManagerVouchers/ManagerVouchers';
+import ManagerBranches from './Components/ManagerBranches/ManagerBranches';
 const { Header, Sider, Content } = Layout;
 const cx = classNames.bind(styles);
 
@@ -81,6 +83,11 @@ function Admin() {
             label: 'Quản lý mã giảm giá',
         },
         {
+            key: 'branches',
+            icon: <EnvironmentOutlined />,
+            label: 'Quản lý cụm rạp CGV',
+        },
+        {
             key: 'order',
             icon: <ShoppingOutlined />,
             label: 'Quản lý đơn hàng',
@@ -111,6 +118,8 @@ function Admin() {
                 return <ManagerServices />;
             case 'vouchers':
                 return <ManagerVouchers />;
+            case 'branches':
+                return <ManagerBranches />;
             case 'order':
                 return <ManagerOrder />;
             case 'users':

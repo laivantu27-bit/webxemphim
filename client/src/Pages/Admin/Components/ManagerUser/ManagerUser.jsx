@@ -1,22 +1,40 @@
 import { useEffect, useState } from 'react';
-import { Table, Space, Button, message, Popconfirm, Modal, Form, Select } from 'antd';
-import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Table, Space, Button, message, Modal, Form, Select, Tag, Badge } from 'antd';
+import { EditOutlined, TeamOutlined, SafetyCertificateOutlined, UserOutlined } from '@ant-design/icons';
 import classNames from 'classnames/bind';
 import styles from './ManagerUser.module.scss';
 import { requestGetUserByAdmin, requestUpdateRoleUser } from '../../../../config/request';
 
 const cx = classNames.bind(styles);
 
+// Hàm lấy role thực từ user (hỗ trợ cả field cũ isAdmin và mới role)
+const getUserRole = (user) => {
+    if (user.role && user.role !== 'customer') return user.role;
+    if (user.role === 'customer') return 'customer';
+    return user.isAdmin === '1' ? 'admin' : 'customer';
+};
+
+const roleConfig = {
+    admin: { label: 'Admin', color: 'red', icon: <SafetyCertificateOutlined /> },
+    staff: { label: 'Nhân viên', color: 'blue', icon: <TeamOutlined /> },
+    customer: { label: 'Khách hàng', color: 'green', icon: <UserOutlined /> },
+};
+
 function ManagerUser() {
     const [users, setUsers] = useState([]);
-    const [loading] = useState(false);
+    const [loading, setLoading] = useState(false);
     const [isModalVisible, setIsModalVisible] = useState(false);
     const [selectedUser, setSelectedUser] = useState(null);
     const [form] = Form.useForm();
 
     const fetchUsers = async () => {
-        const res = await requestGetUserByAdmin();
-        setUsers(res.metadata);
+        setLoading(true);
+        try {
+            const res = await requestGetUserByAdmin();
+            setUsers(res.metadata);
+        } finally {
+            setLoading(false);
+        }
     };
 
     useEffect(() => {
@@ -27,7 +45,7 @@ function ManagerUser() {
         setSelectedUser(user);
         form.setFieldsValue({
             userId: user.id,
-            role: user.isAdmin,
+            role: getUserRole(user),
         });
         setIsModalVisible(true);
     };
@@ -45,7 +63,7 @@ function ManagerUser() {
     const handleFinish = async (values) => {
         await requestUpdateRoleUser(values);
         await fetchUsers();
-        message.success(`Cập nhật quyền người dùng thành công`);
+        message.success(`Cập nhật vai trò người dùng thành công`);
         setIsModalVisible(false);
     };
 
@@ -67,20 +85,23 @@ function ManagerUser() {
             key: 'phone',
         },
         {
-            title: 'Địa chỉ',
-            dataIndex: 'address',
-            key: 'address',
-        },
-        {
             title: 'Vai trò',
-            dataIndex: 'isAdmin',
-            key: 'isAdmin',
-            render: (isAdmin) => (isAdmin === '1' ? 'Admin' : 'User'),
+            key: 'role',
+            render: (_, record) => {
+                const role = getUserRole(record);
+                const config = roleConfig[role] || roleConfig.customer;
+                return (
+                    <Tag color={config.color} icon={config.icon}>
+                        {config.label}
+                    </Tag>
+                );
+            },
             filters: [
-                { text: 'Admin', value: '1' },
-                { text: 'User', value: '0' },
+                { text: 'Admin', value: 'admin' },
+                { text: 'Nhân viên', value: 'staff' },
+                { text: 'Khách hàng', value: 'customer' },
             ],
-            onFilter: (value, record) => record.isAdmin === value,
+            onFilter: (value, record) => getUserRole(record) === value,
         },
         {
             title: 'Thao tác',
@@ -103,6 +124,26 @@ function ManagerUser() {
     return (
         <div className={cx('wrapper')}>
             <h2 className={cx('title')}>Quản lý người dùng</h2>
+
+            {/* Summary badges */}
+            <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
+                <Badge count={users.filter((u) => getUserRole(u) === 'admin').length} color="red">
+                    <Tag icon={<SafetyCertificateOutlined />} color="red" style={{ padding: '4px 12px', fontSize: 13 }}>
+                        Admin
+                    </Tag>
+                </Badge>
+                <Badge count={users.filter((u) => getUserRole(u) === 'staff').length} color="blue">
+                    <Tag icon={<TeamOutlined />} color="blue" style={{ padding: '4px 12px', fontSize: 13 }}>
+                        Nhân viên
+                    </Tag>
+                </Badge>
+                <Badge count={users.filter((u) => getUserRole(u) === 'customer').length} color="green">
+                    <Tag icon={<UserOutlined />} color="green" style={{ padding: '4px 12px', fontSize: 13 }}>
+                        Khách hàng
+                    </Tag>
+                </Badge>
+            </div>
+
             <Table
                 columns={columns}
                 dataSource={users}
@@ -116,7 +157,7 @@ function ManagerUser() {
             />
 
             <Modal
-                title="Chỉnh sửa quyền người dùng"
+                title="Chỉnh sửa vai trò người dùng"
                 open={isModalVisible}
                 onOk={handleOk}
                 onCancel={handleCancel}
@@ -125,12 +166,27 @@ function ManagerUser() {
                 className={cx('permission-modal')}
             >
                 {selectedUser && (
-                    <div className={cx('user-info')}>
+                    <div
+                        className={cx('user-info')}
+                        style={{ marginBottom: 16, padding: '12px', background: '#f5f5f5', borderRadius: 8 }}
+                    >
                         <p>
                             <strong>Họ và tên:</strong> {selectedUser.fullName}
                         </p>
                         <p>
                             <strong>Email:</strong> {selectedUser.email}
+                        </p>
+                        <p>
+                            <strong>Vai trò hiện tại:</strong>{' '}
+                            {(() => {
+                                const role = getUserRole(selectedUser);
+                                const config = roleConfig[role] || roleConfig.customer;
+                                return (
+                                    <Tag color={config.color} icon={config.icon}>
+                                        {config.label}
+                                    </Tag>
+                                );
+                            })()}
                         </p>
                     </div>
                 )}
@@ -140,12 +196,28 @@ function ManagerUser() {
                     </Form.Item>
                     <Form.Item
                         name="role"
-                        label="Vai trò"
+                        label="Vai trò mới"
                         rules={[{ required: true, message: 'Vui lòng chọn vai trò!' }]}
                     >
-                        <Select>
-                            <Select.Option value="0">User</Select.Option>
-                            <Select.Option value="1">Admin</Select.Option>
+                        <Select size="large">
+                            <Select.Option value="customer">
+                                <Tag color="green" icon={<UserOutlined />}>
+                                    Khách hàng
+                                </Tag>
+                                <span style={{ marginLeft: 8, color: '#666' }}>— Xem phim, đặt vé</span>
+                            </Select.Option>
+                            <Select.Option value="staff">
+                                <Tag color="blue" icon={<TeamOutlined />}>
+                                    Nhân viên
+                                </Tag>
+                                <span style={{ marginLeft: 8, color: '#666' }}>— Quét QR, bán vé tại quầy</span>
+                            </Select.Option>
+                            <Select.Option value="admin">
+                                <Tag color="red" icon={<SafetyCertificateOutlined />}>
+                                    Admin
+                                </Tag>
+                                <span style={{ marginLeft: 8, color: '#666' }}>— Toàn quyền quản lý</span>
+                            </Select.Option>
                         </Select>
                     </Form.Item>
                 </Form>

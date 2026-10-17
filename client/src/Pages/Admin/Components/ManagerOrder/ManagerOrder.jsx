@@ -23,10 +23,11 @@ function ManagerOrder() {
         try {
             setLoading(true);
             const response = await requestGetPaymentByAdmin();
-            setPayments(response.metadata);
+            setPayments(Array.isArray(response?.metadata) ? response.metadata : []);
         } catch (error) {
             console.error('Error fetching payments:', error);
             message.error('Lỗi khi tải danh sách thanh toán');
+            setPayments([]);
         } finally {
             setLoading(false);
         }
@@ -61,8 +62,9 @@ function ManagerOrder() {
             pending: 'gold',
             success: 'green',
             failed: 'red',
+            canceled: 'default',
         };
-        return colors[status.toLowerCase()];
+        return colors[status?.toLowerCase()] || 'blue';
     };
 
     const getStatusText = (status) => {
@@ -70,8 +72,9 @@ function ManagerOrder() {
             pending: 'Chờ xử lý',
             success: 'Thành công',
             failed: 'Thất bại',
+            canceled: 'Đã hủy',
         };
-        return statusText[status.toLowerCase()];
+        return statusText[status?.toLowerCase()] || status;
     };
 
     const handleFilterChange = (type, value) => {
@@ -83,7 +86,7 @@ function ManagerOrder() {
     };
 
     const getFilteredPayments = () => {
-        let filteredPayments = [...payments];
+        let filteredPayments = Array.isArray(payments) ? [...payments] : [];
 
         // Filter by status
         if (statusFilter !== 'all') {
@@ -105,53 +108,75 @@ function ManagerOrder() {
 
     const columns = [
         {
-            title: 'Mã thanh toán',
+            title: 'Mã đơn',
             dataIndex: 'id',
             key: 'id',
-            width: '15%',
+            width: '12%',
+            render: (id) => <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{id}</span>,
         },
         {
-            title: 'Mã người dùng',
+            title: 'Khách hàng',
             dataIndex: 'userId',
             key: 'userId',
-            render: (userId, record) => record.user.fullName,
+            render: (userId, record) => (
+                <div>
+                    <div style={{ fontWeight: 600 }}>{record?.user?.fullName || record?.customerName || 'Khách vãng lai'}</div>
+                    {record?.customerPhone && <div style={{ fontSize: 12, color: '#888' }}>SĐT: {record.customerPhone}</div>}
+                    {record?.staffId && <Tag color="purple" style={{ marginTop: 2 }}>Bán tại quầy</Tag>}
+                </div>
+            ),
         },
         {
             title: 'Ảnh phim',
             dataIndex: 'movieId',
-            key: 'movieId',
-            render: (movieId, record) => <img className={cx('image')} src={record.movie.poster_url} alt="ảnh phim" />,
+            key: 'movieImg',
+            width: '7%',
+            render: (movieId, record) => (
+                <img
+                    className={cx('image')}
+                    src={record?.movie?.poster_url || record?.movie?.thumb_url || 'https://placehold.co/60x90?text=Film'}
+                    alt="ảnh phim"
+                    style={{ width: 45, height: 60, objectFit: 'cover', borderRadius: 4 }}
+                />
+            ),
         },
         {
             title: 'Tên phim',
             dataIndex: 'movieId',
-            key: 'movieId',
-            render: (movieId, record) => record.movie.name,
+            key: 'movieName',
+            render: (movieId, record) => (
+                <div>
+                    <div style={{ fontWeight: 600 }}>{record?.movie?.name || 'Phim đã chiếu'}</div>
+                    <div style={{ fontSize: 12, color: '#888' }}>
+                        Suất: {record?.time} - {dayjs(record?.date).format('DD/MM/YYYY')}
+                    </div>
+                </div>
+            ),
         },
-
         {
             title: 'Ghế',
             dataIndex: 'seatId',
             key: 'seatId',
             width: '10%',
+            render: (seatId) => <Tag color="volcano">{seatId}</Tag>,
         },
         {
             title: 'Tổng tiền',
             dataIndex: 'totalPrice',
             key: 'totalPrice',
-            width: '10%',
+            width: '12%',
             align: 'right',
-            render: (price) => <span className={cx('price')}>{price.toLocaleString('vi-VN')}đ</span>,
+            render: (price) => <span className={cx('price')}>{Number(price || 0).toLocaleString('vi-VN')}đ</span>,
         },
         {
             title: 'Trạng thái',
             key: 'status',
             dataIndex: 'status',
-            width: '15%',
+            width: '14%',
             render: (status, record) => (
                 <Select
                     value={status}
-                    style={{ width: 140 }}
+                    style={{ width: 130 }}
                     onChange={(newStatus) => handleStatusChange(newStatus, record)}
                     className={cx('status-select')}
                 >
@@ -163,6 +188,9 @@ function ManagerOrder() {
                     </Select.Option>
                     <Select.Option value="failed">
                         <Tag color="red">Thất bại</Tag>
+                    </Select.Option>
+                    <Select.Option value="canceled">
+                        <Tag color="default">Đã hủy</Tag>
                     </Select.Option>
                 </Select>
             ),
@@ -199,6 +227,7 @@ function ManagerOrder() {
                             <Select.Option value="pending">Chờ xử lý</Select.Option>
                             <Select.Option value="success">Thành công</Select.Option>
                             <Select.Option value="failed">Thất bại</Select.Option>
+                            <Select.Option value="canceled">Đã hủy</Select.Option>
                         </Select>
                     </Col>
                     <Col span={8}>
@@ -238,18 +267,23 @@ function ManagerOrder() {
                 {selectedPayment && (
                     <Descriptions bordered column={1}>
                         <Descriptions.Item label="Mã thanh toán">{selectedPayment.id}</Descriptions.Item>
-                        <Descriptions.Item label="Mã người dùng">{selectedPayment.user.fullName}</Descriptions.Item>
-                        <Descriptions.Item label="Tên phim">{selectedPayment.movie.name}</Descriptions.Item>
-                        <Descriptions.Item label="Ảnh phim">
-                            <img src={selectedPayment.movie.thumb_url} alt="ảnh phim" />
+                        <Descriptions.Item label="Khách hàng">
+                            {selectedPayment?.user?.fullName || selectedPayment?.customerName || 'Khách vãng lai'}
+                            {selectedPayment?.customerPhone && ` (SĐT: ${selectedPayment.customerPhone})`}
                         </Descriptions.Item>
+                        <Descriptions.Item label="Tên phim">{selectedPayment?.movie?.name || 'Phim đã lưu'}</Descriptions.Item>
+                        {selectedPayment?.movie?.thumb_url && (
+                            <Descriptions.Item label="Ảnh phim">
+                                <img src={selectedPayment.movie.thumb_url} alt="ảnh phim" style={{ width: 80, borderRadius: 4 }} />
+                            </Descriptions.Item>
+                        )}
                         <Descriptions.Item label="Ghế">{selectedPayment.seatId}</Descriptions.Item>
                         <Descriptions.Item label="Thời gian">{selectedPayment.time}</Descriptions.Item>
                         <Descriptions.Item label="Ngày xem">
                             {dayjs(selectedPayment.date).format('DD/MM/YYYY')}
                         </Descriptions.Item>
                         <Descriptions.Item label="Tổng tiền">
-                            {selectedPayment.totalPrice.toLocaleString('vi-VN')}đ
+                            {Number(selectedPayment.totalPrice || 0).toLocaleString('vi-VN')}đ
                         </Descriptions.Item>
                         <Descriptions.Item label="Trạng thái">
                             <Tag color={getStatusColor(selectedPayment.status)}>
@@ -257,8 +291,21 @@ function ManagerOrder() {
                             </Tag>
                         </Descriptions.Item>
                         <Descriptions.Item label="Phương thức thanh toán">
-                            {selectedPayment.paymentMethod === 'momo' ? 'MoMo' : 'VNPay'}
+                            {selectedPayment.paymentMethod === 'momo'
+                                ? 'Ví MoMo'
+                                : selectedPayment.paymentMethod === 'vnpay'
+                                ? 'Cổng VNPay'
+                                : selectedPayment.paymentMethod === 'cash'
+                                ? 'Tiền mặt tại quầy'
+                                : selectedPayment.paymentMethod === 'banking'
+                                ? 'Chuyển khoản QR'
+                                : selectedPayment.paymentMethod}
                         </Descriptions.Item>
+                        {selectedPayment.voucherCode && (
+                            <Descriptions.Item label="Mã giảm giá">
+                                <Tag color="green">{selectedPayment.voucherCode}</Tag> (Giảm {Number(selectedPayment.discountAmount || 0).toLocaleString('vi-VN')}đ)
+                            </Descriptions.Item>
+                        )}
                     </Descriptions>
                 )}
             </Modal>

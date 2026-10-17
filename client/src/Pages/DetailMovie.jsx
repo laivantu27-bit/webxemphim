@@ -6,11 +6,13 @@ import axios from 'axios';
 import { Link, useParams } from 'react-router-dom';
 import { requestGetMovieById } from '../config/request';
 import { Rate } from 'antd';
+import TrailerModal, { getYouTubeEmbedUrl } from '../Components/TrailerModal/TrailerModal';
 
 function DetailMovie() {
     const [movie, setMovie] = useState(null);
     const [loading, setLoading] = useState(true);
     const [previewMovie, setPreviewMovie] = useState(null);
+    const [isTrailerOpen, setIsTrailerOpen] = useState(false);
 
     const { id } = useParams();
 
@@ -85,12 +87,16 @@ function DetailMovie() {
                                     }}
                                     className="w-full h-full object-cover rounded-md shadow-xl"
                                 />
-                                <div className="absolute inset-0 flex items-center justify-center">
-                                    <div className="w-16 h-16 rounded-full bg-red-600/50 flex items-center justify-center cursor-pointer hover:bg-red-600 transition-colors">
+                                <div 
+                                    className="absolute inset-0 flex items-center justify-center cursor-pointer group"
+                                    onClick={() => setIsTrailerOpen(true)}
+                                    title="Bấm để xem Trailer"
+                                >
+                                    <div className="w-16 h-16 rounded-full bg-red-600/60 group-hover:bg-red-600 group-hover:scale-110 flex items-center justify-center transition-all duration-300 shadow-xl shadow-red-600/40">
                                         <div className="w-14 h-14 rounded-full bg-red-600 flex items-center justify-center">
                                             <svg
                                                 xmlns="http://www.w3.org/2000/svg"
-                                                className="h-8 w-8"
+                                                className="h-8 w-8 ml-0.5"
                                                 viewBox="0 0 20 20"
                                                 fill="currentColor"
                                             >
@@ -102,6 +108,9 @@ function DetailMovie() {
                                             </svg>
                                         </div>
                                     </div>
+                                    <span className="absolute bottom-4 bg-black/75 backdrop-blur-sm text-xs font-semibold px-3 py-1 rounded-full text-white/90 border border-white/10 group-hover:bg-red-600 transition-colors">
+                                        ▶ Xem Trailer
+                                    </span>
                                 </div>
                             </div>
 
@@ -155,12 +164,19 @@ function DetailMovie() {
                                 </div>
 
                                 {/* Action buttons */}
-                                <div className="flex flex-col sm:flex-row gap-4 mt-8">
+                                <div className="flex flex-wrap gap-4 mt-8">
                                     <Link to={`/booking/${movie.id}`}>
-                                        <button className="bg-red-600 hover:bg-red-700 text-white py-3 px-8 rounded-md text-lg font-semibold transition-colors">
-                                            Đặt vé
+                                        <button className="bg-red-600 hover:bg-red-700 text-white py-3.5 px-8 rounded-xl text-lg font-bold shadow-lg shadow-red-600/40 hover:scale-105 transition-all">
+                                            Đặt vé ngay
                                         </button>
                                     </Link>
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsTrailerOpen(true)}
+                                        className="bg-white/10 hover:bg-white/20 text-white border border-white/20 py-3.5 px-7 rounded-xl text-lg font-semibold flex items-center space-x-2 backdrop-blur-md hover:scale-105 transition-all shadow-md"
+                                    >
+                                        <span>🎬 Xem Trailer</span>
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -177,6 +193,44 @@ function DetailMovie() {
                             {movie.description || 'Đang cập nhật nội dung phim...'}
                         </p>
                     </div>
+
+                    {/* Trailer Video Section */}
+                    {movie.trailer_url && (
+                        <div className="mt-12">
+                            <div className="flex items-center justify-between mb-6">
+                                <h2 className="text-2xl font-bold text-red-600 border-l-4 border-red-600 pl-4">
+                                    TRAILER / VIDEO PHIM - {movie.name}
+                                </h2>
+                                <button
+                                    onClick={() => setIsTrailerOpen(true)}
+                                    className="text-xs sm:text-sm bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white px-3 py-1.5 rounded-full border border-red-600/40 transition-all flex items-center space-x-1"
+                                >
+                                    <span>🔍 Xem toàn màn hình</span>
+                                </button>
+                            </div>
+                            <div className="bg-[#212121] p-4 sm:p-6 rounded-2xl border border-white/5 shadow-2xl">
+                                <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black shadow-inner">
+                                    {getYouTubeEmbedUrl(movie.trailer_url) ? (
+                                        <iframe
+                                            src={getYouTubeEmbedUrl(movie.trailer_url).replace('autoplay=1', 'autoplay=0')}
+                                            title={`${movie.name} Trailer`}
+                                            className="w-full h-full border-0"
+                                            allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                            allowFullScreen
+                                        />
+                                    ) : (
+                                        <video
+                                            src={movie.trailer_url}
+                                            controls
+                                            className="w-full h-full object-contain"
+                                        >
+                                            Trình duyệt của bạn không hỗ trợ phát video này.
+                                        </video>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Reviews section */}
                     <div className="mt-12">
@@ -206,6 +260,12 @@ function DetailMovie() {
                     </div>
                 </div>
             </main>
+
+            <TrailerModal
+                isOpen={isTrailerOpen}
+                onClose={() => setIsTrailerOpen(false)}
+                movie={movie}
+            />
 
             <Footer />
         </div>

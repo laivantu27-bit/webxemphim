@@ -8,6 +8,7 @@ import {
     requestCreateRoom,
     requestUpdateRoom,
     requestDeleteRoom,
+    requestGetAllBranches,
 } from '../../../../config/request';
 
 const cx = classNames.bind(styles);
@@ -63,14 +64,19 @@ function ManagerRoom() {
     const [modalMode, setModalMode] = useState('add');
     const [form] = Form.useForm();
     const [rooms, setRooms] = useState([]);
+    const [branches, setBranches] = useState([]);
 
     const formRows = Form.useWatch('totalRows', form);
     const formSeats = Form.useWatch('seatsPerRow', form);
 
     const fetchRooms = async () => {
         try {
-            const result = await requestGetAllRooms();
-            setRooms(result.metadata);
+            const [roomsRes, branchRes] = await Promise.all([
+                requestGetAllRooms(),
+                requestGetAllBranches().catch(() => ({ metadata: [] })),
+            ]);
+            setRooms(roomsRes.metadata || []);
+            setBranches(branchRes.metadata || []);
         } catch (error) {
             message.error('Lỗi khi tải danh sách phòng chiếu');
         }
@@ -98,6 +104,11 @@ function ManagerRoom() {
             title: 'Rạp trực thuộc',
             dataIndex: 'cinema',
             key: 'cinema',
+            render: (cinema) => (
+                <Tag color="magenta" style={{ fontWeight: 600, fontSize: '12.5px', padding: '3px 8px' }}>
+                    🏢 {cinema}
+                </Tag>
+            ),
         },
         {
             title: 'Loại phòng',
@@ -266,10 +277,34 @@ function ManagerRoom() {
 
                     <Form.Item
                         name="cinema"
-                        label="Rạp trực thuộc"
-                        rules={[{ required: true, message: 'Vui lòng nhập rạp trực thuộc!' }]}
+                        label="Rạp / Chi nhánh trực thuộc"
+                        rules={[{ required: true, message: 'Vui lòng chọn rạp trực thuộc!' }]}
                     >
-                        <Input placeholder="VD: CGV Vincom Thủ Đức, Lotte Cinema Gò Vấp" />
+                        <Select
+                            showSearch
+                            placeholder="-- Chọn chi nhánh rạp CGV --"
+                            optionFilterProp="filterText"
+                            onChange={(val, opt) => {
+                                form.setFieldsValue({
+                                    cinema: val,
+                                    cinemaBranchId: opt?.branchId,
+                                });
+                            }}
+                            options={branches.map((b) => ({
+                                value: b.name,
+                                branchId: b.id,
+                                filterText: `${b.name} ${b.province} ${b.city} ${b.address}`,
+                                label: (
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <span>🏢 <strong>{b.name}</strong></span>
+                                        <Tag color="cyan">{b.province || b.city}</Tag>
+                                    </div>
+                                ),
+                            }))}
+                        />
+                    </Form.Item>
+                    <Form.Item name="cinemaBranchId" hidden>
+                        <Input />
                     </Form.Item>
 
                     <Space style={{ width: '100%' }} size="large">

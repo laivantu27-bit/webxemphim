@@ -4,10 +4,12 @@ import { Link } from 'react-router-dom';
 import { LeftOutlined, RightOutlined, StarFilled, PlayCircleOutlined } from '@ant-design/icons';
 import '../App.css';
 import { requestFindMovieNew } from '../config/request';
+import TrailerModal from './TrailerModal/TrailerModal';
 
 function Banner() {
     const [data, setData] = useState([]);
     const [currentIndex, setCurrentIndex] = useState(0);
+    const [selectedTrailerMovie, setSelectedTrailerMovie] = useState(null);
     const sliderRef = useRef(null);
 
     useEffect(() => {
@@ -117,14 +119,21 @@ function Banner() {
                                         : `Đây là mô tả cho bộ phim ${item.name}. Phim mang đến những cảnh quay mãn nhãn và cốt truyện vô cùng hấp dẫn.`}
                                 </p>
 
-                                {/* Action CTA Button "Đặt Vé Ngay" */}
-                                <div className="pt-2">
+                                {/* Action CTA Buttons "Đặt Vé Ngay" and "Xem Trailer" */}
+                                <div className="pt-2 flex flex-wrap items-center gap-3">
                                     <Link to={`/booking/${item.id}`}>
                                         <button className="bg-red-600 hover:bg-red-700 text-white font-bold text-base px-8 py-3.5 rounded-full flex items-center space-x-2.5 shadow-lg shadow-red-600/40 hover:scale-105 transition-all duration-300">
                                             <PlayCircleOutlined className="text-xl" />
                                             <span>Đặt Vé Ngay</span>
                                         </button>
                                     </Link>
+                                    <button
+                                        type="button"
+                                        onClick={() => setSelectedTrailerMovie(item)}
+                                        className="bg-white/15 hover:bg-white/25 text-white font-semibold text-base px-6 py-3.5 rounded-full flex items-center space-x-2 backdrop-blur-md border border-white/20 hover:scale-105 transition-all duration-300 shadow-md"
+                                    >
+                                        <span>🎬 Xem Trailer</span>
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -186,6 +195,13 @@ function Banner() {
                     />
                 ))}
             </div>
+
+            {/* Trailer Modal */}
+            <TrailerModal
+                isOpen={!!selectedTrailerMovie}
+                onClose={() => setSelectedTrailerMovie(null)}
+                movie={selectedTrailerMovie}
+            />
         </div>
     );
 }

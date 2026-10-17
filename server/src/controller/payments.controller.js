@@ -11,9 +11,12 @@ const Voucher = require('../models/voucher.model');
 const crypto = require('crypto');
 const axios = require('axios');
 const dayjs = require('dayjs');
+const { Op } = require('sequelize');
+const { connect } = require('../config/index');
 const { VNPay, ignoreLogger, ProductCode, VnpLocale, dateFormat } = require('vnpay');
 
 function generatePayID() {
+
     // Tạo ID thanh toán bao gồm cả giây để tránh trùng lặp
     const now = new Date();
     const timestamp = now.getTime();
@@ -22,10 +25,28 @@ function generatePayID() {
     return `PAY${timestamp}${seconds}${milliseconds}`;
 }
 
+const { calculateSeatsTotal } = require('../utils/seatPricing');
+const { updateUserXPAndLevel } = require('../utils/xpHelper');
+
+const BANK_CONFIG = {
+    bankId: 'vietcombank',
+    bankName: 'Ngân hàng TMCP Ngoại Thương Việt Nam (Vietcombank)',
+    accountNumber: '1336991507',
+    accountName: 'LAI VAN TU',
+    template: 'compact2',
+};
+
 class PaymentsController {
+    async getBankConfig(req, res) {
+        new OK({
+            message: 'Lấy thông tin tài khoản ngân hàng thành công',
+            metadata: BANK_CONFIG,
+        }).send(res);
+    }
+
     async createPayment(req, res) {
         const { id } = req.user;
-        const { typePayment, idMovie, idSeat, time, date, services, voucherCode, discountAmount } = req.body;
+        const { typePayment, idMovie, idSeat, time, date, services, voucherCode, discountAmount, branchId, branchName } = req.body;
 
         if (!idMovie || !idSeat) {
             throw new BadRequestError('idMovie and idSeat are required');
@@ -36,9 +57,10 @@ class PaymentsController {
             throw new BadRequestError('Movie not found');
         }
 
-        // Calculate ticket total
-        const seatCount = Array.isArray(idSeat) ? idSeat.length : (typeof idSeat === 'string' ? idSeat.split(',').length : 1);
-        const ticketTotal = findMovie.price * seatCount;
+        // Calculate ticket total theo từng hàng ghế (ngồi đầu giá cao hơn ngồi sau)
+        const seatCodes = Array.isArray(idSeat) ? idSeat : (typeof idSeat === 'string' ? idSeat.split(',').map((s) => s.trim()) : []);
+        const ticketTotal = calculateSeatsTotal(findMovie.price, seatCodes);
+
 
         // Calculate snack/drink services total
         let serviceTotal = 0;
@@ -71,49 +93,140 @@ class PaymentsController {
         const totalPrice = Math.max(0, subtotal - appliedDiscount);
         const seatIdStr = Array.isArray(idSeat) ? idSeat.join(',') : idSeat;
         const payId = generatePayID();
+        const formattedDate = dayjs(date).format('YYYY-MM-DD');
 
-        // 1. Direct / Cash / Test payment method
-        if (typePayment === 'direct' || typePayment === 'cash' || typePayment === 'test') {
-            const seats = Array.isArray(idSeat) ? idSeat : idSeat.split(',');
-            for (const seat of seats) {
-                await Seats.create({
-                    status: 'booked',
-                    time: time,
-                    date: dayjs(date).format('YYYY-MM-DD'),
-                    row: seat[0],
-                    number: seat.slice(1),
-                    movieId: idMovie,
-                    seat_code: seat,
-                });
-            }
-
-            const payment = await Payments.create({
-                id: payId,
+        // BƯỚC 1: KIỂM TRA CHỐNG TRÙNG GHẾ (Race Condition Check)
+        // Nếu bất kỳ ghế nào đã bị người khác đặt (status = booked), từ chối ngay lập tức
+        const alreadyBooked = await Seats.findAll({
+            where: {
                 movieId: idMovie,
-                userId: id,
-                seatId: seatIdStr,
-                totalPrice: totalPrice,
+                date: formattedDate,
                 time: time,
-                date: dayjs(date).format('YYYY-MM-DD'),
-                paymentMethod: typePayment,
-                status: 'success',
-                services: services && services.length > 0 ? JSON.stringify(services) : null,
-                voucherCode: voucherCode ? voucherCode.trim().toUpperCase() : null,
-                discountAmount: appliedDiscount,
-            });
+                seat_code: { [Op.in]: seatCodes },
+                status: 'booked',
+            },
+        });
 
-            if (voucherCode) {
-                await Voucher.increment('usedCount', { where: { code: voucherCode.trim().toUpperCase() } });
-            }
-
-            return new OK({ message: 'Đặt vé và thanh toán thành công', metadata: payment }).send(res);
+        if (alreadyBooked.length > 0) {
+            const conflictCodes = alreadyBooked.map((s) => s.seat_code).join(', ');
+            throw new BadRequestError(
+                `Rất tiếc! Ghế ${conflictCodes} vừa có khách khác đặt trước bạn. Vui lòng chọn ghế khác!`
+            );
         }
+
+        // 1. Direct / Cash / Test / VietQR / Banking payment method với Transaction & Row-level lock
+        if (
+            typePayment === 'direct' ||
+            typePayment === 'cash' ||
+            typePayment === 'test' ||
+            typePayment === 'vietqr' ||
+            typePayment === 'banking' ||
+            typePayment === 'vietcombank' ||
+            typePayment === 'vnpay'
+        ) {
+            const t = await connect.transaction();
+            try {
+                // Kiểm tra lại lần 2 có kèm Lock trong Transaction (ngăn 2 request chạy cùng mili-giây)
+                const doubleCheck = await Seats.findAll({
+                    where: {
+                        movieId: idMovie,
+                        date: formattedDate,
+                        time: time,
+                        seat_code: { [Op.in]: seatCodes },
+                        status: 'booked',
+                    },
+                    transaction: t,
+                    lock: t.LOCK.UPDATE,
+                });
+
+                if (doubleCheck.length > 0) {
+                    await t.rollback();
+                    const conflictCodes = doubleCheck.map((s) => s.seat_code).join(', ');
+                    throw new BadRequestError(
+                        `Rất tiếc! Ghế ${conflictCodes} vừa được khách khác đặt trước bạn một tích tắc. Vui lòng chọn ghế khác!`
+                    );
+                }
+
+                // Cập nhật hoặc ghi nhận ghế đã đặt
+                for (const seat of seatCodes) {
+                    const foundSeat = await Seats.findOne({
+                        where: { movieId: idMovie, date: formattedDate, time: time, seat_code: seat },
+                        transaction: t,
+                    });
+
+                    if (foundSeat) {
+                        await foundSeat.update({ status: 'booked' }, { transaction: t });
+                    } else {
+                        await Seats.create(
+                            {
+                                status: 'booked',
+                                time: time,
+                                date: formattedDate,
+                                row: seat.charAt(0),
+                                number: parseInt(seat.slice(1), 10) || 1,
+                                movieId: idMovie,
+                                seat_code: seat,
+                            },
+                            { transaction: t },
+                        );
+                    }
+                }
+
+                const payment = await Payments.create(
+                    {
+                        id: payId,
+                        movieId: idMovie,
+                        userId: id,
+                        cinemaBranchId: branchId || null,
+                        branchName: branchName || 'CGV Cinema',
+                        seatId: seatIdStr,
+                        totalPrice: totalPrice,
+                        time: time,
+                        date: formattedDate,
+                        paymentMethod: typePayment,
+                        status: 'success',
+                        services: services && services.length > 0 ? JSON.stringify(services) : null,
+                        voucherCode: voucherCode ? voucherCode.trim().toUpperCase() : null,
+                        discountAmount: appliedDiscount,
+                    },
+                    { transaction: t },
+                );
+
+                if (voucherCode) {
+                    await Voucher.increment('usedCount', {
+                        where: { code: voucherCode.trim().toUpperCase() },
+                        transaction: t,
+                    });
+                }
+
+                await t.commit();
+
+                // Cộng điểm kinh nghiệm XP (100 XP / vé)
+                try {
+                    await updateUserXPAndLevel(
+                        id,
+                        seatCodes.length * 100,
+                        `Mua ${seatCodes.length} vé xem phim "${findMovie.name}" (+${seatCodes.length * 100} XP)`
+                    );
+                } catch (e) {
+                    console.error('Error awarding XP on payment:', e);
+                }
+
+                return new OK({ message: 'Đặt vé và thanh toán thành công', metadata: payment }).send(res);
+            } catch (error) {
+                await t.rollback();
+                throw error;
+            }
+        }
+
 
         // Create pending payment for Momo/VNPay to preserve services and voucher
         await Payments.create({
             id: payId,
             movieId: idMovie,
             userId: id,
+            cinemaBranchId: branchId || null,
+            branchName: branchName || 'CGV Cinema',
             seatId: seatIdStr,
             totalPrice: totalPrice,
             time: time,
@@ -249,16 +362,24 @@ class PaymentsController {
         const payId = parts[6];
 
         const seats = idSeat.split(',');
+        const formattedDate = dayjs(date).format('YYYY-MM-DD');
         for (const seat of seats) {
-            await Seats.create({
-                status: 'booked',
-                time: time,
-                date: dayjs(date).format('YYYY-MM-DD'),
-                row: seat[0],
-                number: seat.slice(1),
-                movieId: idMovie,
-                seat_code: seat,
+            const foundSeat = await Seats.findOne({
+                where: { movieId: idMovie, date: formattedDate, time: time, seat_code: seat },
             });
+            if (foundSeat) {
+                await foundSeat.update({ status: 'booked' });
+            } else {
+                await Seats.create({
+                    status: 'booked',
+                    time: time,
+                    date: formattedDate,
+                    row: seat.charAt(0),
+                    number: parseInt(seat.slice(1), 10) || 1,
+                    movieId: idMovie,
+                    seat_code: seat,
+                });
+            }
         }
 
         let payment = null;
@@ -280,10 +401,23 @@ class PaymentsController {
                 seatId: idSeat,
                 totalPrice: totalPrice,
                 time: time,
-                date: dayjs(date).format('YYYY-MM-DD'),
+                date: formattedDate,
                 paymentMethod: 'momo',
                 status: 'success',
             });
+        }
+
+        // Tích điểm kinh nghiệm XP
+        if (idUser) {
+            try {
+                await updateUserXPAndLevel(
+                    idUser,
+                    seats.length * 100,
+                    `Thanh toán MoMo ${seats.length} vé xem phim (+${seats.length * 100} XP)`
+                );
+            } catch (e) {
+                console.error('MoMo XP notice:', e);
+            }
         }
 
         return res.redirect(`http://localhost/payment-success/${payment.id}`);
@@ -302,17 +436,26 @@ class PaymentsController {
         const payId = parts[6];
 
         const seats = idSeat.split(',');
+        const formattedDate = dayjs(date).format('YYYY-MM-DD');
         for (const seat of seats) {
-            await Seats.create({
-                status: 'booked',
-                time: time,
-                date: dayjs(date).format('YYYY-MM-DD'),
-                row: seat[0],
-                number: seat.slice(1),
-                movieId: idMovie,
-                seat_code: seat,
+            const foundSeat = await Seats.findOne({
+                where: { movieId: idMovie, date: formattedDate, time: time, seat_code: seat },
             });
+            if (foundSeat) {
+                await foundSeat.update({ status: 'booked' });
+            } else {
+                await Seats.create({
+                    status: 'booked',
+                    time: time,
+                    date: formattedDate,
+                    row: seat.charAt(0),
+                    number: parseInt(seat.slice(1), 10) || 1,
+                    movieId: idMovie,
+                    seat_code: seat,
+                });
+            }
         }
+
 
         let payment = null;
         if (payId) {
@@ -337,6 +480,19 @@ class PaymentsController {
                 paymentMethod: 'vnpay',
                 status: 'success',
             });
+        }
+
+        // Tích điểm kinh nghiệm XP
+        if (idUser) {
+            try {
+                await updateUserXPAndLevel(
+                    idUser,
+                    seats.length * 100,
+                    `Thanh toán VNPay ${seats.length} vé xem phim (+${seats.length * 100} XP)`
+                );
+            } catch (e) {
+                console.error('VNPay XP notice:', e);
+            }
         }
 
         return res.redirect(`http://localhost/payment-success/${payment.id}`);
@@ -374,15 +530,15 @@ class PaymentsController {
     }
 
     async getPaymentByAdmin(req, res) {
-        const payments = await Payments.findAll();
+        const payments = await Payments.findAll({ order: [['createdAt', 'DESC']] });
         const data = await Promise.all(
             payments.map(async (payment) => {
-                const findMovie = await Movie.findOne({ where: { id: payment.movieId } });
-                const findUser = await User.findOne({ where: { id: payment.userId } });
+                const findMovie = payment.movieId ? await Movie.findOne({ where: { id: payment.movieId } }) : null;
+                const findUser = payment.userId ? await User.findOne({ where: { id: payment.userId } }) : null;
                 return {
                     ...payment?.dataValues,
-                    movie: findMovie?.dataValues,
-                    user: findUser?.dataValues,
+                    movie: findMovie?.dataValues || null,
+                    user: findUser?.dataValues || null,
                 };
             }),
         );

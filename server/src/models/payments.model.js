@@ -30,6 +30,16 @@ const payments = connect.define(
             allowNull: true,
             comment: 'Staff who sold the ticket at counter',
         },
+        cinemaBranchId: {
+            type: DataTypes.UUID,
+            allowNull: true,
+            comment: 'Chi nhánh rạp nơi chiếu phim hoặc quầy vé',
+        },
+        branchName: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            comment: 'Tên chi nhánh rạp CGV',
+        },
         seatId: {
             type: DataTypes.STRING,
             allowNull: false,

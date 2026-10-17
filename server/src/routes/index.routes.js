@@ -8,6 +8,7 @@ const serviceRoutes = require('./service.routes');
 const chatbotRoutes = require('./chatbot.routes');
 const staffRoutes = require('./staff.routes');
 const voucherRoutes = require('./voucher.routes');
+const cinemaBranchRoutes = require('./cinemaBranch.routes');
 
 function routes(app) {
     app.use('/api/users', usersRoutes);
@@ -20,6 +21,7 @@ function routes(app) {
     app.use('/api/chatbot', chatbotRoutes);
     app.use('/api/staff', staffRoutes);
     app.use('/api/voucher', voucherRoutes);
+    app.use('/api/cinema-branch', cinemaBranchRoutes);
 }
 
 module.exports = routes;

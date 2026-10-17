@@ -74,7 +74,35 @@ function Header() {
         }
     };
 
+    const userRole = dataUser?.role || (dataUser?.isAdmin && dataUser?.isAdmin !== '0' ? 'admin' : 'customer');
+    const isAdmin = userRole === 'admin';
+    const isStaff = userRole === 'staff' || isAdmin;
+
     const userMenuItems = [
+        ...(isAdmin
+            ? [
+                  {
+                      key: 'admin_portal',
+                      label: (
+                          <Link to="/admin" className="flex items-center gap-2 text-red-400 font-semibold">
+                              <span>👑 Trang Quản Trị (Admin)</span>
+                          </Link>
+                      ),
+                  },
+              ]
+            : []),
+        ...(isStaff
+            ? [
+                  {
+                      key: 'staff_portal',
+                      label: (
+                          <Link to="/staff" className="flex items-center gap-2 text-blue-400 font-semibold">
+                              <span>🎟️ Cổng Nhân Viên (Staff)</span>
+                          </Link>
+                      ),
+                  },
+              ]
+            : []),
         {
             key: '1',
             label: (
@@ -104,6 +132,7 @@ function Header() {
         },
     ];
 
+
     return (
         <div className="h-[80px] fixed top-0 left-0 right-0 z-50 opacity-90 w-full bg-[#2226] backdrop-blur-sm">
             <div className="flex justify-between items-center h-full w-[90%] mx-auto relative">
@@ -117,9 +146,6 @@ function Header() {
                         <a href="#coming-soon" className="hover:text-red-500 transition-colors">Phim Sắp Chiếu</a>
                         <a href="#cinemas" className="hover:text-red-500 transition-colors">Rạp / Lịch Chiếu</a>
                         <a href="#promotions" className="hover:text-red-500 transition-colors">Ưu Đãi</a>
-                        <Link to="/staff" className="text-red-400 hover:text-red-300 transition-colors font-semibold flex items-center gap-1 border border-red-500/40 px-2 py-0.5 rounded-full text-xs bg-red-950/30">
-                            🎟️ Nhân Viên
-                        </Link>
                     </nav>
                 </div>
 
@@ -302,7 +328,7 @@ function Header() {
                             </div>
                         )}
 
-                        {dataUser && dataUser._id ? (
+                        {dataUser && dataUser.id ? (
                             <div className="flex flex-col gap-3">
                                 <div className="flex items-center gap-2 py-2 border-b border-gray-700">
                                     <Avatar
@@ -310,27 +336,61 @@ function Header() {
                                         icon={!dataUser.avatar && <UserOutlined />}
                                         size="default"
                                     />
-                                    <span className="text-white text-sm">{dataUser.fullName || dataUser.email}</span>
+                                    <span className="text-white text-sm font-semibold">{dataUser.fullName || dataUser.email}</span>
+                                    {isAdmin && <span className="text-xs bg-red-900/60 text-red-300 px-2 py-0.5 rounded border border-red-500/40">Admin</span>}
+                                    {!isAdmin && isStaff && <span className="text-xs bg-blue-900/60 text-blue-300 px-2 py-0.5 rounded border border-blue-500/40">Staff</span>}
                                 </div>
 
-                                <Link to="/profile" className="flex items-center gap-2 text-white py-2">
+                                {isAdmin && (
+                                    <Link
+                                        to="/admin"
+                                        className="flex items-center gap-2 text-red-400 font-semibold py-2"
+                                        onClick={() => setMobileMenuOpen(false)}
+                                    >
+                                        <span>👑 Trang Quản Trị (Admin)</span>
+                                    </Link>
+                                )}
+
+                                {isStaff && (
+                                    <Link
+                                        to="/staff"
+                                        className="flex items-center gap-2 text-blue-400 font-semibold py-2"
+                                        onClick={() => setMobileMenuOpen(false)}
+                                    >
+                                        <span>🎟️ Cổng Nhân Viên (Staff)</span>
+                                    </Link>
+                                )}
+
+                                <Link
+                                    to="/profile"
+                                    className="flex items-center gap-2 text-white py-2"
+                                    onClick={() => setMobileMenuOpen(false)}
+                                >
                                     <UserOutlined />
                                     <span>Thông tin tài khoản</span>
                                 </Link>
 
-                                <Link to="/settings" className="flex items-center gap-2 text-white py-2">
+                                <Link
+                                    to="/settings"
+                                    className="flex items-center gap-2 text-white py-2"
+                                    onClick={() => setMobileMenuOpen(false)}
+                                >
                                     <SettingOutlined />
                                     <span>Cài đặt</span>
                                 </Link>
 
                                 <div
-                                    onClick={handleLogout}
+                                    onClick={() => {
+                                        setMobileMenuOpen(false);
+                                        handleLogout();
+                                    }}
                                     className="flex items-center gap-2 text-red-500 py-2 cursor-pointer"
                                 >
                                     <LogoutOutlined />
                                     <span>Đăng xuất</span>
                                 </div>
                             </div>
+
                         ) : (
                             <div className="flex flex-col gap-3">
                                 <Link to="/login" className="w-full">

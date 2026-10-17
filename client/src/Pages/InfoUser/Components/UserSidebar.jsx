@@ -1,34 +1,73 @@
-import { Avatar, Menu } from 'antd';
-import { UserOutlined, HistoryOutlined, LogoutOutlined } from '@ant-design/icons';
+import { Avatar, Menu, Tag } from 'antd';
+import {
+    UserOutlined,
+    HistoryOutlined,
+    LogoutOutlined,
+    TrophyOutlined,
+    IdcardOutlined,
+    CrownOutlined,
+} from '@ant-design/icons';
 import { useStore } from '../../../hooks/useStore';
 
-function UserSidebar({ selectedMenu, handleMenuSelect, handleLogout }) {
+function UserSidebar({ selectedMenu, handleMenuSelect, handleLogout, xpInfo }) {
     const { dataUser } = useStore();
 
+    const level = xpInfo?.level || dataUser?.level || 'Bronze';
+    const levelColors = {
+        Bronze: 'gold',
+        Silver: 'cyan',
+        Gold: 'warning',
+        Diamond: 'purple',
+    };
+
     return (
-        <div className="bg-gradient-to-b from-[#1a1a1a] to-[#161616] rounded-xl overflow-hidden shadow-lg">
-            <div className="p-6 flex flex-col items-center border-b border-gray-800">
+        <div className="bg-gradient-to-b from-[#1a1a1a] to-[#161616] rounded-xl overflow-hidden shadow-lg border border-gray-800">
+            <div className="p-6 flex flex-col items-center border-b border-gray-800 text-center">
                 <Avatar
                     size={80}
                     src={dataUser.avatar}
                     icon={!dataUser.avatar && <UserOutlined />}
-                    className="mb-3 border-2 border-red-600"
+                    className="mb-3 border-2 border-red-600 shadow-lg"
                 />
-                <h3 className="text-lg font-semibold text-white">{dataUser.fullName}</h3>
-                <p className="text-gray-400 text-sm">{dataUser.email}</p>
+                <h3 className="text-lg font-bold text-white">{dataUser.fullName}</h3>
+                <p className="text-gray-400 text-xs mt-0.5">{dataUser.email}</p>
+
+                {/* Level Tag */}
+                <div className="mt-3 flex items-center gap-1.5">
+                    <Tag color={levelColors[level] || 'gold'} className="font-bold uppercase tracking-wider px-2.5 py-0.5">
+                        <CrownOutlined /> {level} Member
+                    </Tag>
+                    {xpInfo?.xpPoints !== undefined && (
+                        <span className="text-yellow-400 font-mono text-xs font-bold">
+                            {Number(xpInfo.xpPoints).toLocaleString()} XP
+                        </span>
+                    )}
+                </div>
             </div>
 
             <Menu
                 mode="inline"
                 selectedKeys={[selectedMenu]}
                 onClick={handleMenuSelect}
-                className="bg-transparent border-0"
+                className="bg-transparent border-0 py-2"
                 items={[
                     {
                         key: 'profile',
                         icon: <UserOutlined />,
                         label: 'Thông tin cá nhân',
                         className: 'hover:text-red-500 text-white',
+                    },
+                    {
+                        key: 'loyalty',
+                        icon: <TrophyOutlined className="text-yellow-400" />,
+                        label: 'Thẻ thành viên & Đổi quà',
+                        className: 'hover:text-red-500 text-white font-semibold',
+                    },
+                    {
+                        key: 'student',
+                        icon: <IdcardOutlined className="text-blue-400" />,
+                        label: 'Ưu đãi Học sinh / SV',
+                        className: 'hover:text-red-500 text-white font-semibold',
                     },
                     {
                         key: 'history',
@@ -40,7 +79,7 @@ function UserSidebar({ selectedMenu, handleMenuSelect, handleLogout }) {
                         key: 'logout',
                         icon: <LogoutOutlined />,
                         label: 'Đăng xuất',
-                        className: 'text-red-500 hover:text-red-400',
+                        className: 'text-red-500 hover:text-red-400 font-medium',
                         onClick: handleLogout,
                     },
                 ]}

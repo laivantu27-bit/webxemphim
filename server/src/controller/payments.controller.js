@@ -14,15 +14,11 @@ const dayjs = require('dayjs');
 const { Op } = require('sequelize');
 const { connect } = require('../config/index');
 const { VNPay, ignoreLogger, ProductCode, VnpLocale, dateFormat } = require('vnpay');
+const sendMailBookingTicket = require('../utils/sendMailBookingTicket');
 
 function generatePayID() {
-
-    // Tạo ID thanh toán bao gồm cả giây để tránh trùng lặp
-    const now = new Date();
-    const timestamp = now.getTime();
-    const seconds = now.getSeconds().toString().padStart(2, '0');
-    const milliseconds = now.getMilliseconds().toString().padStart(3, '0');
-    return `PAY${timestamp}${seconds}${milliseconds}`;
+    // Luôn sinh mã UUID v4 hợp lệ để lưu vào cột id (uuid) của bảng payments trong PostgreSQL
+    return crypto.randomUUID();
 }
 
 const { calculateSeatsTotal } = require('../utils/seatPricing');
@@ -233,7 +229,30 @@ class PaymentsController {
                     console.error('Error awarding XP on payment:', e);
                 }
 
-                return new OK({ message: 'Đặt vé và thanh toán thành công', metadata: payment }).send(res);
+                // Gửi email vé điện tử xác nhận đặt vé thành công về Gmail
+                try {
+                    const bookingUser = await User.findByPk(id);
+                    const recipientEmail = bookingUser?.email || req.body.email || req.body.customerEmail;
+                    if (recipientEmail) {
+                        sendMailBookingTicket({
+                            email: recipientEmail,
+                            customerName: bookingUser?.fullName || req.body.customerName || 'Quý khách',
+                            movieName: findMovie.name,
+                            moviePoster: findMovie.poster_url || findMovie.thumb_url,
+                            branchName: branchName || 'CGV Cinema',
+                            date: formattedDate,
+                            time: time,
+                            seats: seatCodes,
+                            services: services,
+                            totalPrice: totalPrice,
+                            ticketId: payment.id,
+                        }).catch((err) => console.error('[Mail Background] Error sending ticket email:', err));
+                    }
+                } catch (mailErr) {
+                    console.error('Lỗi chuẩn bị gửi email vé:', mailErr.message);
+                }
+
+                return new OK({ message: 'Chúc mừng bạn đã đặt vé thành công! Thông tin vé đã được gửi về Gmail của bạn.', metadata: payment }).send(res);
             } catch (error) {
                 await t.rollback();
                 throw error;

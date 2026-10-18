@@ -520,11 +520,37 @@ function BookMovie() {
 
         try {
             const res = await requestCreatePayment(data);
-            message.success('Thanh toán thành công! Vé của bạn đã được xuất.');
             setIsVietQrModalVisible(false);
             setIsMomoModalVisible(false);
             setIsModalVisible(false);
-            window.location.href = `/payment-success/${res.metadata.id}`;
+
+            message.success('🎉 Chúc mừng bạn đã đặt vé thành công! Thông tin vé đã được gửi về Gmail của bạn.');
+
+            Modal.success({
+                title: '🎉 CHÚC MỪNG BẠN ĐÃ ĐẶT VÉ THÀNH CÔNG!',
+                content: (
+                    <div className="py-2 space-y-2 text-gray-800">
+                        <p className="font-semibold text-base">
+                            Vé xem phim <strong>"{movieDetails?.name}"</strong> đã được xuất thành công!
+                        </p>
+                        <p className="text-sm text-gray-600">
+                            📧 Chi tiết vé điện tử và mã QR vào rạp đã được gửi về Gmail của bạn.
+                        </p>
+                        <p className="text-xs text-emerald-600 font-bold">
+                            Đang chuyển hướng bạn đến trang vé điện tử...
+                        </p>
+                    </div>
+                ),
+                okText: 'Xem vé ngay',
+                centered: true,
+                onOk: () => {
+                    window.location.href = `/payment-success/${res.metadata.id}`;
+                },
+            });
+
+            setTimeout(() => {
+                window.location.href = `/payment-success/${res.metadata.id}`;
+            }, 1800);
         } catch (error) {
             console.error(error);
             message.error(error.response?.data?.message || 'Có lỗi xảy ra khi tạo thanh toán');

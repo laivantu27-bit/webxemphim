@@ -171,11 +171,14 @@ function PaymentSuccess() {
                             Xác nhận đặt vé thành công
                         </div>
                         <h1 className="text-3xl font-extrabold text-white">
-                            Chúc mừng bạn đã mua vé thành công! 🎉
+                            Chúc mừng bạn đã đặt vé thành công! 🎉
                         </h1>
                         <p className="text-gray-300 mt-2 text-sm max-w-md">
-                            Mã vé và mã QR điện tử đã được kích hoạt. Bạn có thể lưu mã QR để xuất trình tại rạp.
+                            Mã vé và mã QR điện tử đã được kích hoạt. Thông tin vé chi tiết đã được gửi về hòm thư <strong>Gmail</strong> của bạn.
                         </p>
+                        <div className="mt-3 inline-flex items-center gap-2 bg-emerald-950/60 border border-emerald-500/40 px-4 py-1.5 rounded-full text-emerald-300 text-xs font-semibold shadow-sm">
+                            <span>📧 Đã gửi xác nhận vé và mã QR về Gmail</span>
+                        </div>
                     </div>
 
                     {/* Payment info card */}

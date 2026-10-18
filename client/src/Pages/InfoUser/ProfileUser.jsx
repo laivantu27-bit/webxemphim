@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import Header from '../../Components/Header';
 import Footer from '../../Components/Footer';
 import { requestLogout, requestGetUserXPInfo, requestGetPaymentByUserId, requestAuth } from '../../config/request';
 import { message } from 'antd';
+import { HomeOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 
 // Import components
 import UserSidebar from './Components/UserSidebar';
@@ -79,7 +81,25 @@ function ProfileUser() {
             <ToastContainer />
             <Header />
 
-            <main className="container mx-auto px-4 py-12">
+            <main className="container mx-auto px-4 py-8">
+                {/* Navigation Breadcrumb / Back button */}
+                <div className="mb-6 flex flex-wrap items-center justify-between gap-4 bg-[#1e1e1e] border border-gray-800 px-5 py-3.5 rounded-xl shadow-md">
+                    <Link
+                        to="/"
+                        className="inline-flex items-center gap-2 text-sm font-semibold text-gray-200 hover:text-white bg-gray-800 hover:bg-red-600 px-4 py-2 rounded-lg border border-gray-700 hover:border-red-500 transition-all duration-200 shadow-sm"
+                    >
+                        <ArrowLeftOutlined />
+                        <span>Quay lại Trang Chủ</span>
+                    </Link>
+                    <div className="flex items-center gap-2 text-xs md:text-sm text-gray-400">
+                        <Link to="/" className="hover:text-red-400 transition-colors flex items-center gap-1">
+                            <HomeOutlined /> Trang chủ
+                        </Link>
+                        <span>/</span>
+                        <span className="text-red-500 font-semibold">Thông tin tài khoản</span>
+                    </div>
+                </div>
+
                 <div className="flex flex-col md:flex-row gap-6">
                     {/* Sidebar */}
                     <div className="w-full md:w-1/4">

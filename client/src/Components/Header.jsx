@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import logo from '../assets/images/logo.png';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Dropdown, Space, Avatar, Empty } from 'antd';
 import {
     UserOutlined,
@@ -9,6 +9,7 @@ import {
     LogoutOutlined,
     SettingOutlined,
     SearchOutlined,
+    HomeOutlined,
 } from '@ant-design/icons';
 import { useStore } from '../hooks/useStore';
 import { requestLogout, requestSearchMovie } from '../config/request';
@@ -17,6 +18,8 @@ import NotificationDropdown from './NotificationDropdown/NotificationDropdown';
 
 function Header() {
     const { dataUser } = useStore();
+    const navigate = useNavigate();
+    const location = useLocation();
 
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [searchMovie, setSearchMovie] = useState('');
@@ -26,6 +29,28 @@ function Header() {
     const searchRef = useRef(null);
 
     const debounce = useDebounce(searchMovie, 500);
+
+    const handleNavClick = (e, sectionId) => {
+        e.preventDefault();
+        if (location.pathname === '/') {
+            const el = document.getElementById(sectionId);
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth' });
+            } else {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        } else {
+            navigate('/');
+            setTimeout(() => {
+                const el = document.getElementById(sectionId);
+                if (el) {
+                    el.scrollIntoView({ behavior: 'smooth' });
+                } else {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            }, 150);
+        }
+    };
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -79,6 +104,15 @@ function Header() {
     const isStaff = userRole === 'staff' || isAdmin;
 
     const userMenuItems = [
+        {
+            key: 'home',
+            label: (
+                <Link to="/" className="flex items-center gap-2 text-white font-medium hover:text-red-400">
+                    <HomeOutlined className="text-red-500" />
+                    <span>Trang chủ</span>
+                </Link>
+            ),
+        },
         ...(isAdmin
             ? [
                   {
@@ -124,7 +158,7 @@ function Header() {
         {
             key: '3',
             label: (
-                <div onClick={handleLogout} className="flex items-center gap-2 text-red-500">
+                <div onClick={handleLogout} className="flex items-center gap-2 text-red-500 cursor-pointer">
                     <LogoutOutlined />
                     <span>Đăng xuất</span>
                 </div>
@@ -132,20 +166,31 @@ function Header() {
         },
     ];
 
-
     return (
         <div className="h-[80px] fixed top-0 left-0 right-0 z-50 opacity-90 w-full bg-[#2226] backdrop-blur-sm">
             <div className="flex justify-between items-center h-full w-[90%] mx-auto relative">
                 {/* Logo & Nav Links */}
                 <div className="h-full flex items-center gap-8">
-                    <Link to="/">
-                        <img src={logo} alt="logo" className="h-[50px] object-contain" />
+                    <Link to="/" className="flex items-center">
+                        <img src={logo} alt="logo" className="h-[50px] object-contain hover:scale-105 transition-transform" />
                     </Link>
                     <nav className="hidden lg:flex items-center gap-6 text-sm font-medium text-gray-300">
-                        <a href="#now-showing" className="hover:text-red-500 transition-colors">Phim Đang Chiếu</a>
-                        <a href="#coming-soon" className="hover:text-red-500 transition-colors">Phim Sắp Chiếu</a>
-                        <a href="#cinemas" className="hover:text-red-500 transition-colors">Rạp / Lịch Chiếu</a>
-                        <a href="#promotions" className="hover:text-red-500 transition-colors">Ưu Đãi</a>
+                        <Link to="/" className="hover:text-red-500 transition-colors flex items-center gap-1.5 text-white font-medium">
+                            <HomeOutlined />
+                            <span>Trang Chủ</span>
+                        </Link>
+                        <a href="/#now-showing" onClick={(e) => handleNavClick(e, 'now-showing')} className="hover:text-red-500 transition-colors">
+                            Phim Đang Chiếu
+                        </a>
+                        <a href="/#coming-soon" onClick={(e) => handleNavClick(e, 'coming-soon')} className="hover:text-red-500 transition-colors">
+                            Phim Sắp Chiếu
+                        </a>
+                        <a href="/#cinemas" onClick={(e) => handleNavClick(e, 'cinemas')} className="hover:text-red-500 transition-colors">
+                            Rạp / Lịch Chiếu
+                        </a>
+                        <a href="/#promotions" onClick={(e) => handleNavClick(e, 'promotions')} className="hover:text-red-500 transition-colors">
+                            Ưu Đãi
+                        </a>
                     </nav>
                 </div>
 
@@ -339,6 +384,58 @@ function Header() {
                                     <span className="text-white text-sm font-semibold">{dataUser.fullName || dataUser.email}</span>
                                     {isAdmin && <span className="text-xs bg-red-900/60 text-red-300 px-2 py-0.5 rounded border border-red-500/40">Admin</span>}
                                     {!isAdmin && isStaff && <span className="text-xs bg-blue-900/60 text-blue-300 px-2 py-0.5 rounded border border-blue-500/40">Staff</span>}
+                                </div>
+
+                                <Link
+                                    to="/"
+                                    className="flex items-center gap-2 text-white py-2 hover:text-red-400 font-semibold"
+                                    onClick={() => setMobileMenuOpen(false)}
+                                >
+                                    <HomeOutlined className="text-red-500 text-lg" />
+                                    <span>Trang chủ</span>
+                                </Link>
+
+                                <div className="flex flex-col gap-1 pl-6 border-l border-gray-800 text-sm">
+                                    <a
+                                        href="/#now-showing"
+                                        onClick={(e) => {
+                                            setMobileMenuOpen(false);
+                                            handleNavClick(e, 'now-showing');
+                                        }}
+                                        className="text-gray-300 py-1 hover:text-red-400"
+                                    >
+                                        Phim Đang Chiếu
+                                    </a>
+                                    <a
+                                        href="/#coming-soon"
+                                        onClick={(e) => {
+                                            setMobileMenuOpen(false);
+                                            handleNavClick(e, 'coming-soon');
+                                        }}
+                                        className="text-gray-300 py-1 hover:text-red-400"
+                                    >
+                                        Phim Sắp Chiếu
+                                    </a>
+                                    <a
+                                        href="/#cinemas"
+                                        onClick={(e) => {
+                                            setMobileMenuOpen(false);
+                                            handleNavClick(e, 'cinemas');
+                                        }}
+                                        className="text-gray-300 py-1 hover:text-red-400"
+                                    >
+                                        Rạp / Lịch Chiếu
+                                    </a>
+                                    <a
+                                        href="/#promotions"
+                                        onClick={(e) => {
+                                            setMobileMenuOpen(false);
+                                            handleNavClick(e, 'promotions');
+                                        }}
+                                        className="text-gray-300 py-1 hover:text-red-400"
+                                    >
+                                        Ưu Đãi
+                                    </a>
                                 </div>
 
                                 {isAdmin && (

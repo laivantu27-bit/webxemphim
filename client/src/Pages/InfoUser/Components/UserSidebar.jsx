@@ -6,11 +6,14 @@ import {
     TrophyOutlined,
     IdcardOutlined,
     CrownOutlined,
+    HomeOutlined,
 } from '@ant-design/icons';
+import { Link, useNavigate } from 'react-router-dom';
 import { useStore } from '../../../hooks/useStore';
 
 function UserSidebar({ selectedMenu, handleMenuSelect, handleLogout, xpInfo }) {
     const { dataUser } = useStore();
+    const navigate = useNavigate();
 
     const level = xpInfo?.level || dataUser?.level || 'Bronze';
     const levelColors = {
@@ -22,6 +25,16 @@ function UserSidebar({ selectedMenu, handleMenuSelect, handleLogout, xpInfo }) {
 
     return (
         <div className="bg-gradient-to-b from-[#1a1a1a] to-[#161616] rounded-xl overflow-hidden shadow-lg border border-gray-800">
+            {/* Back to Home Quick Button */}
+            <div className="p-3 border-b border-gray-800/80 bg-[#141414]">
+                <Link
+                    to="/"
+                    className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-lg bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white font-semibold text-sm shadow-md transition-all duration-200 transform hover:-translate-y-0.5"
+                >
+                    <HomeOutlined className="text-base" />
+                    <span>← Về Trang Chủ</span>
+                </Link>
+            </div>
             <div className="p-6 flex flex-col items-center border-b border-gray-800 text-center">
                 <Avatar
                     size={80}
@@ -74,6 +87,13 @@ function UserSidebar({ selectedMenu, handleMenuSelect, handleLogout, xpInfo }) {
                         icon: <HistoryOutlined />,
                         label: 'Lịch sử đặt vé',
                         className: 'hover:text-red-500 text-white',
+                    },
+                    {
+                        key: 'home',
+                        icon: <HomeOutlined className="text-red-400" />,
+                        label: 'Về Trang Chủ',
+                        className: 'hover:text-red-500 text-white font-medium border-t border-gray-800/80 mt-1',
+                        onClick: () => navigate('/'),
                     },
                     {
                         key: 'logout',
